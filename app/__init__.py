@@ -10,11 +10,12 @@ def create_app(config_class=Config):
     db.init_app(app)
     login_manager.init_app(app)
 
-    @login_manager.user_loader
-    def load_user(user_id):
-        return None
+    login_manager.login_view = "auth.login"
 
     from app.routes.main_routes import main_bp
+    from app.routes.auth_routes import auth_bp
+
     app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp)
 
     return app
