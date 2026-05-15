@@ -1,6 +1,7 @@
 from datetime import datetime
 from flask_login import UserMixin
 from app.extensions import db, login_manager
+from datetime import datetime, UTC
 
 
 class UserRole:
@@ -34,8 +35,7 @@ class User(db.Model, UserMixin):
     role = db.Column(db.String(20), nullable=False, default=UserRole.STUDENT)
     is_active_account = db.Column(db.Boolean, nullable=False, default=True)
 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     student = db.relationship("Student", back_populates="user", uselist=False)
 
     @property
@@ -193,7 +193,11 @@ class Enrollment(db.Model):
 
     status = db.Column(db.String(20), nullable=False, default=EnrollmentStatus.REGISTERED)
 
-    registered_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    registered_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC)
+    )
     cancelled_at = db.Column(db.DateTime, nullable=True)
 
     midterm_exam_done = db.Column(db.Boolean, nullable=False, default=False)
