@@ -8,6 +8,12 @@ from app.utils import role_required
 auth_bp = Blueprint("auth", __name__)
 
 
+INVALID_CREDENTIAL_ERRORS = {
+    "Tài khoản không tồn tại",
+    "Sai mật khẩu",
+}
+
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
@@ -19,8 +25,9 @@ def login():
     user, error = authenticate_user(username, password)
 
     if error:
-        flash(error, "error")
-        return redirect(url_for("auth.login"))
+        message = "Invalid username or password" if error in INVALID_CREDENTIAL_ERRORS else error
+        flash(message, "error")
+        return render_template("login.html"), 401
 
     login_user(user)
 
