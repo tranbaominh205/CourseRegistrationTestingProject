@@ -1,11 +1,49 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Course Registration System</title>
-</head>
-<body>
-    <h1>Hệ thống quản lý đăng ký khóa học</h1>
-    <p>Bài tập lớn môn Kiểm thử phần mềm</p>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dimension | Trang chủ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}" />
+  </head>
+  <body>
+    <main class="home-page">
+      <section class="home-shell">
+        <article class="landing-screen">
+          <div class="top-decoration">
+            <div class="vertical-line"></div>
+            <div class="horizontal-line"></div>
+          </div>
+
+          <div class="hero-article">
+            <h1 class="hero-title">MONOENROLL</h1>
+            <div class="hero-copy">
+              <p class="line-xs">HỆ THỐNG QUẢN LÝ VÀ ĐĂNG KÝ HỌC PHẦN TRỰC TUYẾN</p>
+              <p class="line-xs">THIẾT KẾ DÀNH RIÊNG CHO CỔNG THÔNG TIN ĐÀO TẠO ĐẠI HỌC</p>
+            </div>
+          </div>
+
+          <section class="nav-section">
+            <div class="mid-decoration">
+              <div class="horizontal-line"></div>
+              <div class="vertical-line"></div>
+            </div>
+
+            <nav class="action-nav" aria-label="Điều hướng trang chủ">
+              <button type="button" onclick="window.location.href='/login'">ĐĂNG NHẬP</button>
+              <button type="button" onclick="window.location.href='/register'">ĐĂNG KÝ</button>
+            </nav>
+          </section>
+
+          <footer class="hero-footer">
+            <p>
+              © 2026 Tran Bao Minh. All Rights Reserved.
+            </p>
+          </footer>
+        </article>
+      </section>
+    </main>
+  </body>
 </html>

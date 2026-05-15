@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đăng nhập - Course Registration System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+    <div class="login-container">
+        <!-- Top Navigation -->
+        <header class="top-navigation">
+            <div class="nav-left">
+                <div class="logo-circle">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                </div>
+                <span class="logo-text">MONOENROLL</span>
+            </div>
+
+            <div class="nav-right">
+                <button class="nav-button support-btn" type="button" id="backToHomeBtn">Quay lại</button>
+                <button class="nav-button demo-btn" type="button" id="registerBtn">Đăng Ký</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Login Card -->
+            <div class="login-card">
+                <div class="login-header">
+                    <h1 class="login-title">Đăng nhập</h1>
+                    <p class="login-subtitle">
+                        Nhập thông tin của bạn để truy cập vào hệ thống đăng kí môn học
+                    </p>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}" role="alert">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form class="login-form" method="POST" action="/login">
+                    <div class="form-group">
+                        <label class="form-label" for="username">
+                            Mã sinh viên / Tên đăng nhập*
+                        </label>
+                        <input
+                            id="username"
+                            name="username"
+                            type="text"
+                            class="form-input"
+                            placeholder="Nhập mã sinh viên của bạn"
+                            required
+                            autocomplete="username"
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label-row">
+                            <label class="form-label" for="password">
+                                Mật khẩu*
+                            </label>
+                        </div>
+                        <div class="password-input-wrapper">
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                class="form-input"
+                                placeholder="••••••••"
+                                required
+                                autocomplete="current-password"
+                            />
+                            <button
+                                type="button"
+                                class="toggle-password-btn"
+                                id="togglePasswordBtn"
+                                aria-label="Toggle password visibility"
+                            >
+                                <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="display: none;">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <p class="privacy-text">
+                        Thông tin này sẽ được lưu trữ an toàn theo
+                        Điều khoản Dịch vụ &amp;
+                        Chính sách Bảo mật của hệ thống.
+                    </p>
+
+                    <div class="form-actions">
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                        >
+                            ĐĂNG NHẬP
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-left">
+                    Course Registration System
+                </div>
+
+                <div class="footer-center">
+
+
+                </div>
+
+                <div class="footer-right">
+                     <span> © 2026 Tran Bao Minh. All Rights Reserved.</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+</body>
+</html>
