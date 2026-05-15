@@ -19,8 +19,8 @@ def login():
     user, error = authenticate_user(username, password)
 
     if error:
-        flash(error, "danger")
-        return render_template("login.html"), 401
+        flash(error, "error")
+        return redirect(url_for("auth.login"))
 
     login_user(user)
 

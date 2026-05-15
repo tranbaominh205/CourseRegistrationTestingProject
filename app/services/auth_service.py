@@ -9,12 +9,12 @@ def authenticate_user(username, password):
     user = get_user_by_username(username.strip())
 
     if user is None:
-        return None, "Invalid username or password"
+        return None, "Tài khoản không tồn tại"
 
     if not user.is_active:
         return None, "Account is inactive"
 
     if not check_password_hash(user.password_hash, password):
-        return None, "Invalid username or password"
+        return None, "Sai mật khẩu"
 
     return user, None

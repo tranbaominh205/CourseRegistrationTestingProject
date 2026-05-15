@@ -252,7 +252,8 @@ input {
     }
 }
 
-.alert-error {
+.alert-error,
+.alert-danger {
     background-color: #ffebee;
     color: #c62828;
     border: 1px solid #ef5350;
