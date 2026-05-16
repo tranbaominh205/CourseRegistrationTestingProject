@@ -1,11 +1,12 @@
 from datetime import date
+
 from app.extensions import db
 from app.models import Enrollment, EnrollmentStatus
 from app.repositories.course_class_repository import (
     get_class_by_id,
     get_registered_enrollments,
     get_enrollment_by_student_and_class,
-    has_completed_course
+    has_completed_course,
 )
 
 
@@ -30,6 +31,16 @@ def is_schedule_conflict(existing_class, new_class):
     return False
 
 
+def calculate_registered_credits(student_id, semester_id):
+    enrollments = get_registered_enrollments(student_id, semester_id)
+
+    total = 0
+    for enrollment in enrollments:
+        total += enrollment.course_class.course.credits
+
+    return total
+
+
 def register_course(student_id, course_class_id, current_date=None):
     if current_date is None:
         current_date = date.today()
@@ -37,15 +48,15 @@ def register_course(student_id, course_class_id, current_date=None):
     course_class = get_class_by_id(course_class_id)
 
     if course_class is None:
-        return None, "Course class not found"
+        return None, "Không tìm thấy lớp học phần"
 
     semester = course_class.semester
 
     if current_date > semester.registration_end_date:
-        return None, "Registration deadline has passed"
+        return None, "Đã hết hạn đăng ký học phần"
 
     if course_class.current_students >= course_class.max_students:
-        return None, "Course class is full"
+        return None, "Lớp học phần đã đủ số lượng"
 
     existed_enrollment = get_enrollment_by_student_and_class(
         student_id,
@@ -53,10 +64,16 @@ def register_course(student_id, course_class_id, current_date=None):
     )
 
     if existed_enrollment is not None:
-        return None, "Student already registered this class"
+        return None, "Sinh viên đã đăng ký lớp học phần này"
 
     if has_completed_course(student_id, course_class.course_id):
-        return None, "Student has already completed this course"
+        return None, "Sinh viên đã học môn này rồi"
+
+    current_credits = calculate_registered_credits(student_id, semester.id)
+    new_course_credits = course_class.course.credits
+
+    if current_credits + new_course_credits > 25:
+        return None, "Tổng số tín chỉ vượt quá giới hạn cho phép"
 
     existing_enrollments = get_registered_enrollments(
         student_id,
@@ -65,7 +82,7 @@ def register_course(student_id, course_class_id, current_date=None):
 
     for enrollment in existing_enrollments:
         if is_schedule_conflict(enrollment.course_class, course_class):
-            return None, "Schedule conflict"
+            return None, "Lớp học phần bị trùng lịch học"
 
     enrollment = Enrollment(
         student_id=student_id,
@@ -80,3 +97,15 @@ def register_course(student_id, course_class_id, current_date=None):
     db.session.commit()
 
     return enrollment, None
+
+
+def can_confirm_registration(student_id, semester_id):
+    total_credits = calculate_registered_credits(student_id, semester_id)
+
+    if total_credits < 12:
+        return False, f"Bạn chưa đủ số tín chỉ tối thiểu. Cần đăng ký thêm {12 - total_credits} tín chỉ"
+
+    if total_credits > 25:
+        return False, "Tổng số tín chỉ vượt quá giới hạn cho phép"
+
+    return True, "Bạn đã đủ điều kiện xác nhận đăng ký học kỳ"
