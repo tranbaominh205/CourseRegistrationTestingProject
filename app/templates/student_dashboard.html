@@ -22,8 +22,8 @@
           <section>
             <div class="section-header">
               <div class="section-indicator"></div>
-              <h2 class="section-title">Thông tin cá nhân sinh viên</h2>
             </div>
+                <h2 class="section-title">Thông tin cá nhân sinh viên</h2>
 
             <div class="card profile-grid">
               <div class="info-item">
@@ -96,7 +96,9 @@
                   <p>Xem danh sách các môn đã học để biết môn nào không được đăng ký lại.</p>
                 </div>
                 <div class="footer">
-                  <span class="badge">Sắp phát triển</span>
+                  <a href="{{ url_for('student.completed_courses') }}" class="footer-link">
+                    Xem môn đã hoàn thành <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </a>
                 </div>
               </div>
 

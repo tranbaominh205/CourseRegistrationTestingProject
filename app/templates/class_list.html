@@ -83,11 +83,12 @@
                                 <th style="width: 80px;">Số tín chỉ</th>
                                 <th>Lịch học</th>
                                 <th style="width: 120px;">Ngày đăng ký</th>
+                                <th style="width: 60px;">Hủy</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for e in enrollments %}
-                                <tr>
+                                <tr data-enrollment-id="{{ e.id }}" data-credit="{{ e.course_class.course.credits }}">
                                     <td>{{ e.course_class.class_code }}</td>
                                     <td class="text-left">{{ e.course_class.course.name }}</td>
                                     <td>{{ e.course_class.course.credits }}</td>
@@ -97,10 +98,13 @@
                                         {% endfor %}
                                     </td>
                                     <td>{{ e.registered_at.strftime('%d/%m/%Y') if e.registered_at else '—' }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-danger btn-cancel" data-enrollment-id="{{ e.id }}">X</button>
+                                    </td>
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="5" style="text-align:center;padding:20px">Sinh viên chưa đăng ký môn học nào.</td>
+                                    <td colspan="6" style="text-align:center;padding:20px">Sinh viên chưa đăng ký môn học nào.</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -144,7 +148,7 @@
                 {% set missing = 12 - total_credits if total_credits is not none else 12 %}
 
                 {% if can_confirm %}
-                    <form method="POST" action="{{ url_for('student.confirm_registration') }}">
+                    <form id="confirm-form" method="POST" action="{{ url_for('student.confirm_registration') }}">
                         <button type="submit" class="btn btn-success">Xác nhận đăng ký học kỳ</button>
                     </form>
                 {% else %}

@@ -40,14 +40,8 @@ function setupPasswordToggle() {
  * Setup top navigation button actions
  */
 function setupTopNavigation() {
-    const registerBtn = document.getElementById('registerBtn');
     const backToHomeBtn = document.getElementById('backToHomeBtn');
 
-    if (registerBtn) {
-        registerBtn.addEventListener('click', function() {
-            window.location.href = '/register';
-        });
-    }
 
     if (backToHomeBtn) {
         backToHomeBtn.addEventListener('click', function() {

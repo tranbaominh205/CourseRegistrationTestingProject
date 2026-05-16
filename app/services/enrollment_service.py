@@ -7,6 +7,7 @@ from app.repositories.course_class_repository import (
     get_registered_enrollments,
     get_enrollment_by_student_and_class,
     has_completed_course,
+    get_prerequisites,
 )
 
 
@@ -68,6 +69,23 @@ def register_course(student_id, course_class_id, current_date=None):
 
     if has_completed_course(student_id, course_class.course_id):
         return None, "Sinh viên đã học môn này rồi"
+
+    # Check prerequisites
+    prerequisites = get_prerequisites(course_class.course_id)
+    missing = []
+    for p in prerequisites:
+        # p.prerequisite_course_id available; use has_completed_course to check
+        if not has_completed_course(student_id, p.prerequisite_course_id):
+            # try to get course name/code from relationship if available
+            try:
+                name = p.prerequisite_course.name
+                code = p.prerequisite_course.code
+                missing.append(f"{code} - {name}")
+            except Exception:
+                missing.append(str(p.prerequisite_course_id))
+
+    if missing:
+        return None, f"Thiếu điều kiện tiên quyết: {', '.join(missing)}"
 
     current_credits = calculate_registered_credits(student_id, semester.id)
     new_course_credits = course_class.course.credits

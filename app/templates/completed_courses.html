@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Môn đã hoàn thành - Academic System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/class_list.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12.22 2a10 10 0 1 0 9.78 12"></path>
+                    <path d="m19 22-4-4"></path>
+                    <path d="m15 22 4-4"></path>
+                    <path d="M22 22a2 2 0 0 0-2-2"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+            </div>
+            <h1>Môn đã hoàn thành</h1>
+        </header>
+
+        <main>
+            <!-- Completed Courses -->
+            <section class="section-card">
+                <div class="section-header">
+                    <h2>Danh sách môn đã hoàn thành</h2>
+                </div>
+                <div class="table-container">
+                    <table id="completed-courses">
+                        <thead>
+                            <tr class="header-row">
+                                <th style="width: 120px;">Mã môn</th>
+                                <th>Môn học</th>
+                                <th style="width: 80px;">Số tín chỉ</th>
+                                <th style="width: 100px;">Điểm cuối</th>
+                                <th style="width: 120px;">Kết quả</th>
+                                <th style="width: 120px;">Học kỳ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cc in completed_courses %}
+                                <tr>
+                                    <td>{{ cc.course.code }}</td>
+                                    <td class="text-left">{{ cc.course.name }}</td>
+                                    <td>{{ cc.course.credits }}</td>
+                                    <td>{{ ('{:.2f}'.format(cc.final_score) if cc.final_score is not none else '—') }}</td>
+                                    <td>{{ cc.status }}</td>
+                                    <td>{{ cc.semester.name if cc.semester else '—' }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" style="text-align:center;padding:20px">Chưa có môn học nào được ghi nhận là hoàn thành.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Summary -->
+            <section class="summary-box">
+                <h3 class="summary-title">Tổng kết</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Số môn đã hoàn thành:</span>
+                        <span class="summary-value" id="total-courses">{{ completed_courses|length }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Tổng số tín chỉ:</span>
+                        <span class="summary-value" id="total-credits">{{ total_credits }} </span>
+                    </div>
+                </div>
+            </section>
+
+            <div class="action-footer">
+                <a href="{{ url_for('auth.student_dashboard') }}" class="btn btn-secondary">Quay lại dashboard sinh viên</a>
+                <form method="POST" action="{{ url_for('auth.logout') }}">
+                    <button type="submit" class="btn btn-danger-outline">Đăng xuất</button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- Flash Messages as Toast Notifications -->
+    <script>
+      (function() {
+        'use strict';
+
+        function showToast(message, type) {
+          var container = document.getElementById('toast-container');
+          var toast = document.createElement('div');
+          toast.className = 'toast toast-' + type;
+          toast.textContent = message;
+          container.appendChild(toast);
+
+          setTimeout(function() {
+            toast.classList.add('toast-hide');
+            setTimeout(function() {
+              toast.remove();
+            }, 300);
+          }, 3000);
+        }
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              showToast('{{ message }}', '{{ category }}');
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+      })();
+    </script>
+
+</body>
+</html>
+
