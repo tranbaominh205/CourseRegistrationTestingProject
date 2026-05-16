@@ -628,6 +628,14 @@ def seed_data():
         except Exception:
             pass
 
+        # Add an extra prerequisite for testing: make ITEC4401 (Trí tuệ nhân tạo)
+        # require ITEC3301 (Mạng máy tính) which student01 has NOT completed.
+        # This allows testing missing prerequisites for student01 without using student02.
+        try:
+            get_or_create_prerequisite(course_open_7, course_open_5)
+        except Exception:
+            pass
+
         # =====================================================
         # 9. SOME INITIAL ENROLLMENTS (to test registered list / cancel flow)
         # =====================================================
