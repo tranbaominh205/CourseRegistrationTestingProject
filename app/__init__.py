@@ -14,8 +14,18 @@ def create_app(config_class=Config):
 
     from app.routes.main_routes import main_bp
     from app.routes.auth_routes import auth_bp
+    from app.routes.student_routes import student_bp
 
+    app.register_blueprint(student_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+
+    # Prevent browser caching of authenticated pages so 'back' won't show protected content after logout
+    @app.after_request
+    def add_no_cache_headers(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, private, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
 
     return app

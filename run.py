@@ -17,6 +17,8 @@ from app.models import (
     CompletedCourse,
     CourseClassStatus,
     CompletedCourseStatus,
+    Enrollment,
+    EnrollmentStatus,
 )
 
 app = create_app()
@@ -38,233 +40,635 @@ def reset_db():
 
 
 @app.cli.command("seed-data")
+@app.cli.command("seed-data")
 def seed_data():
     with app.app_context():
-        # Users
-        admin = User.query.filter_by(username="admin01").first()
-        if admin is None:
-            admin = User(
-                username="admin01",
-                password_hash=generate_password_hash("123456"),
-                role=UserRole.ADMIN,
-                is_active_account=True
-            )
-            db.session.add(admin)
+        # =====================================================
+        # Helper functions
+        # =====================================================
 
-        student_user = User.query.filter_by(username="student01").first()
-        if student_user is None:
-            student_user = User(
-                username="student01",
-                password_hash=generate_password_hash("123456"),
-                role=UserRole.STUDENT,
-                is_active_account=True
-            )
-            db.session.add(student_user)
-            db.session.flush()
+        def get_or_create_user(username, password, role, active=True):
+            user = User.query.filter_by(username=username).first()
+            if user is None:
+                user = User(
+                    username=username,
+                    password_hash=generate_password_hash(password),
+                    role=role,
+                    is_active_account=active
+                )
+                db.session.add(user)
+                db.session.flush()
+            return user
 
-            student = Student(
-                user_id=student_user.id,
-                student_code="SV001",
-                full_name="Nguyen Van Student",
-                major="Information Technology"
-            )
-            db.session.add(student)
+        def get_or_create_student(user, student_code, full_name, major):
+            student = Student.query.filter_by(student_code=student_code).first()
+            if student is None:
+                student = Student(
+                    user_id=user.id,
+                    student_code=student_code,
+                    full_name=full_name,
+                    major=major
+                )
+                db.session.add(student)
+                db.session.flush()
+            return student
 
-        locked_user = User.query.filter_by(username="locked01").first()
-        if locked_user is None:
-            locked_user = User(
-                username="locked01",
-                password_hash=generate_password_hash("123456"),
-                role=UserRole.STUDENT,
-                is_active_account=False
-            )
-            db.session.add(locked_user)
+        def get_or_create_semester(
+            name,
+            start_date,
+            registration_start_date,
+            registration_end_date,
+            cancel_deadline,
+            is_active
+        ):
+            semester = Semester.query.filter_by(name=name).first()
+            if semester is None:
+                semester = Semester(
+                    name=name,
+                    start_date=start_date,
+                    registration_start_date=registration_start_date,
+                    registration_end_date=registration_end_date,
+                    cancel_deadline=cancel_deadline,
+                    is_active=is_active
+                )
+                db.session.add(semester)
+                db.session.flush()
+            return semester
 
-        db.session.commit()
+        def get_or_create_course(code, name, credits):
+            course = Course.query.filter_by(code=code).first()
+            if course is None:
+                course = Course(
+                    code=code,
+                    name=name,
+                    credits=credits
+                )
+                db.session.add(course)
+                db.session.flush()
+            return course
 
-        # Semester
-        semester = Semester.query.filter_by(name="HK1 2026").first()
-        if semester is None:
-            semester = Semester(
-                name="HK1 2026",
-                start_date=date(2026, 9, 1),
-                registration_start_date=date(2026, 8, 1),
-                registration_end_date=date(2026, 8, 25),
-                cancel_deadline=date(2026, 9, 15),
-                is_active=True
-            )
-            db.session.add(semester)
+        def get_or_create_room(code, capacity=50):
+            room = Room.query.filter_by(code=code).first()
+            if room is None:
+                room = Room(
+                    code=code,
+                    capacity=capacity
+                )
+                db.session.add(room)
+                db.session.flush()
+            return room
 
-        # Courses
-        course_python = Course.query.filter_by(code="ITEC1401").first()
-        if course_python is None:
-            course_python = Course(
-                code="ITEC1401",
-                name="Nhập môn lập trình",
-                credits=3
-            )
-            db.session.add(course_python)
+        def get_or_create_class(
+            course,
+            semester,
+            class_code,
+            max_students=50,
+            current_students=0,
+            status=CourseClassStatus.OPEN
+        ):
+            course_class = CourseClass.query.filter_by(class_code=class_code).first()
+            if course_class is None:
+                course_class = CourseClass(
+                    course_id=course.id,
+                    semester_id=semester.id,
+                    class_code=class_code,
+                    max_students=max_students,
+                    current_students=current_students,
+                    status=status
+                )
+                db.session.add(course_class)
+                db.session.flush()
+            return course_class
 
-        course_oop = Course.query.filter_by(code="ITEC2504").first()
-        if course_oop is None:
-            course_oop = Course(
-                code="ITEC2504",
-                name="Lập trình hướng đối tượng",
-                credits=4
-            )
-            db.session.add(course_oop)
+        def get_or_create_schedule(
+            course_class,
+            room,
+            day_of_week,
+            start_period,
+            end_period
+        ):
+            schedule = ClassSchedule.query.filter_by(
+                course_class_id=course_class.id,
+                day_of_week=day_of_week,
+                start_period=start_period,
+                end_period=end_period
+            ).first()
 
-        course_web = Course.query.filter_by(code="ITEC3401").first()
-        if course_web is None:
-            course_web = Course(
-                code="ITEC3401",
-                name="Lập trình Web",
-                credits=3
-            )
-            db.session.add(course_web)
+            if schedule is None:
+                schedule = ClassSchedule(
+                    course_class_id=course_class.id,
+                    room_id=room.id,
+                    day_of_week=day_of_week,
+                    start_period=start_period,
+                    end_period=end_period
+                )
+                db.session.add(schedule)
+                db.session.flush()
 
-        course_testing = Course.query.filter_by(code="ITEC4501").first()
-        if course_testing is None:
-            course_testing = Course(
-                code="ITEC4501",
-                name="Kiểm thử phần mềm",
-                credits=3
-            )
-            db.session.add(course_testing)
+            return schedule
 
-        db.session.commit()
-
-        # Prerequisite: Lập trình Web cần đã học Lập trình hướng đối tượng
-        prerequisite = CoursePrerequisite.query.filter_by(
-            course_id=course_web.id,
-            prerequisite_course_id=course_oop.id
-        ).first()
-
-        if prerequisite is None:
-            prerequisite = CoursePrerequisite(
-                course_id=course_web.id,
-                prerequisite_course_id=course_oop.id
-            )
-            db.session.add(prerequisite)
-
-        # Rooms
-        room_a101 = Room.query.filter_by(code="A101").first()
-        if room_a101 is None:
-            room_a101 = Room(code="A101", capacity=50)
-            db.session.add(room_a101)
-
-        room_b202 = Room.query.filter_by(code="B202").first()
-        if room_b202 is None:
-            room_b202 = Room(code="B202", capacity=50)
-            db.session.add(room_b202)
-
-        db.session.commit()
-
-        # Course classes
-        class_python = CourseClass.query.filter_by(class_code="ITEC1401-01").first()
-        if class_python is None:
-            class_python = CourseClass(
-                course_id=course_python.id,
-                semester_id=semester.id,
-                class_code="ITEC1401-01",
-                max_students=50,
-                current_students=0,
-                status=CourseClassStatus.OPEN
-            )
-            db.session.add(class_python)
-
-        class_oop = CourseClass.query.filter_by(class_code="ITEC2504-01").first()
-        if class_oop is None:
-            class_oop = CourseClass(
-                course_id=course_oop.id,
-                semester_id=semester.id,
-                class_code="ITEC2504-01",
-                max_students=50,
-                current_students=0,
-                status=CourseClassStatus.OPEN
-            )
-            db.session.add(class_oop)
-
-        class_web = CourseClass.query.filter_by(class_code="ITEC3401-01").first()
-        if class_web is None:
-            class_web = CourseClass(
-                course_id=course_web.id,
-                semester_id=semester.id,
-                class_code="ITEC3401-01",
-                max_students=50,
-                current_students=0,
-                status=CourseClassStatus.OPEN
-            )
-            db.session.add(class_web)
-
-        class_full = CourseClass.query.filter_by(class_code="ITEC4501-FULL").first()
-        if class_full is None:
-            class_full = CourseClass(
-                course_id=course_testing.id,
-                semester_id=semester.id,
-                class_code="ITEC4501-FULL",
-                max_students=50,
-                current_students=50,
-                status=CourseClassStatus.OPEN
-            )
-            db.session.add(class_full)
-
-        db.session.commit()
-
-        # Schedules
-        if ClassSchedule.query.filter_by(course_class_id=class_python.id).first() is None:
-            db.session.add(ClassSchedule(
-                course_class_id=class_python.id,
-                room_id=room_a101.id,
-                day_of_week=2,
-                start_period=1,
-                end_period=3
-            ))
-
-        if ClassSchedule.query.filter_by(course_class_id=class_oop.id).first() is None:
-            db.session.add(ClassSchedule(
-                course_class_id=class_oop.id,
-                room_id=room_b202.id,
-                day_of_week=3,
-                start_period=1,
-                end_period=3
-            ))
-
-        if ClassSchedule.query.filter_by(course_class_id=class_web.id).first() is None:
-            db.session.add(ClassSchedule(
-                course_class_id=class_web.id,
-                room_id=room_a101.id,
-                day_of_week=2,
-                start_period=2,
-                end_period=4
-            ))
-
-        if ClassSchedule.query.filter_by(course_class_id=class_full.id).first() is None:
-            db.session.add(ClassSchedule(
-                course_class_id=class_full.id,
-                room_id=room_b202.id,
-                day_of_week=4,
-                start_period=1,
-                end_period=3
-            ))
-
-        # Completed course: student01 đã học Nhập môn lập trình
-        student = Student.query.filter_by(student_code="SV001").first()
-
-        completed = CompletedCourse.query.filter_by(
-            student_id=student.id,
-            course_id=course_python.id
-        ).first()
-
-        if completed is None:
-            completed = CompletedCourse(
+        def get_or_create_completed_course(
+            student,
+            course,
+            semester,
+            final_score=8.0,
+            status=CompletedCourseStatus.PASSED
+        ):
+            completed = CompletedCourse.query.filter_by(
                 student_id=student.id,
-                course_id=course_python.id,
-                semester_id=semester.id,
-                final_score=8.0,
-                status=CompletedCourseStatus.PASSED
-            )
-            db.session.add(completed)
+                course_id=course.id
+            ).first()
+
+            if completed is None:
+                completed = CompletedCourse(
+                    student_id=student.id,
+                    course_id=course.id,
+                    semester_id=semester.id,
+                    final_score=final_score,
+                    status=status
+                )
+                db.session.add(completed)
+                db.session.flush()
+
+            return completed
+
+        def get_or_create_prerequisite(course, prerequisite_course):
+            pr = CoursePrerequisite.query.filter_by(
+                course_id=course.id,
+                prerequisite_course_id=prerequisite_course.id
+            ).first()
+
+            if pr is None:
+                pr = CoursePrerequisite(
+                    course_id=course.id,
+                    prerequisite_course_id=prerequisite_course.id
+                )
+                db.session.add(pr)
+                db.session.flush()
+
+            return pr
+
+        # =====================================================
+        # 1. USERS
+        # =====================================================
+
+        admin_user = get_or_create_user(
+            username="admin01",
+            password="123456",
+            role=UserRole.ADMIN,
+            active=True
+        )
+
+        student_user = get_or_create_user(
+            username="student01",
+            password="123456",
+            role=UserRole.STUDENT,
+            active=True
+        )
+
+        student = get_or_create_student(
+            user=student_user,
+            student_code="SV001",
+            full_name="Nguyen Van Student",
+            major="Information Technology"
+        )
+
+        student2_user = get_or_create_user(
+            username="student02",
+            password="123456",
+            role=UserRole.STUDENT,
+            active=True
+        )
+
+        student2 = get_or_create_student(
+            user=student2_user,
+            student_code="SV002",
+            full_name="Tran Thi Student",
+            major="Information Technology"
+        )
+
+        locked_user = get_or_create_user(
+            username="locked01",
+            password="123456",
+            role=UserRole.STUDENT,
+            active=False
+        )
+
+        # =====================================================
+        # 2. SEMESTERS
+        # =====================================================
+
+        active_semester = get_or_create_semester(
+            name="HK1 2026",
+            start_date=date(2026, 9, 1),
+            registration_start_date=date(2026, 8, 1),
+            registration_end_date=date(2026, 12, 31),
+            cancel_deadline=date(2026, 9, 15),
+            is_active=True
+        )
+
+        expired_semester = get_or_create_semester(
+            name="HK Expired",
+            start_date=date(2026, 1, 1),
+            registration_start_date=date(2025, 12, 1),
+            registration_end_date=date(2025, 12, 15),
+            cancel_deadline=date(2026, 1, 15),
+            is_active=False
+        )
+
+        # =====================================================
+        # 3. ROOMS
+        # =====================================================
+
+        room_a101 = get_or_create_room("A101")
+        room_b202 = get_or_create_room("B202")
+        room_c303 = get_or_create_room("C303")
+        room_d404 = get_or_create_room("D404")
+
+        # =====================================================
+        # 4. COURSES
+        # =====================================================
+
+        # 2 môn sinh viên đã học
+        course_completed_1 = get_or_create_course(
+            code="ITEC1401",
+            name="Nhập môn lập trình",
+            credits=3
+        )
+
+        course_completed_2 = get_or_create_course(
+            code="ITEC2501",
+            name="Kỹ thuật lập trình",
+            credits=3
+        )
+
+        # 2 môn hết hạn đăng ký học phần
+        course_expired_1 = get_or_create_course(
+            code="ITEC2601",
+            name="Cấu trúc dữ liệu",
+            credits=3
+        )
+
+        course_expired_2 = get_or_create_course(
+            code="ITEC2602",
+            name="Giải thuật",
+            credits=3
+        )
+
+        # 2 môn lớp học phần đã đủ số lượng
+        course_full_1 = get_or_create_course(
+            code="ITEC4501",
+            name="Kiểm thử phần mềm",
+            credits=3
+        )
+
+        course_full_2 = get_or_create_course(
+            code="ITEC4502",
+            name="Đảm bảo chất lượng phần mềm",
+            credits=3
+        )
+
+        # 10 môn còn lại đăng ký được
+        course_open_1 = get_or_create_course(
+            code="ITEC2504",
+            name="Lập trình hướng đối tượng",
+            credits=4
+        )
+
+        course_open_2 = get_or_create_course(
+            code="MATH1201",
+            name="Toán cao cấp",
+            credits=3
+        )
+
+        course_open_3 = get_or_create_course(
+            code="ITEC2201",
+            name="Cơ sở dữ liệu",
+            credits=3
+        )
+
+        course_open_4 = get_or_create_course(
+            code="GEN1001",
+            name="Kỹ năng mềm",
+            credits=2
+        )
+
+        course_open_5 = get_or_create_course(
+            code="ITEC3301",
+            name="Mạng máy tính",
+            credits=3
+        )
+
+        course_open_6 = get_or_create_course(
+            code="ITEC3302",
+            name="Hệ điều hành",
+            credits=3
+        )
+
+        course_open_7 = get_or_create_course(
+            code="ITEC4401",
+            name="Trí tuệ nhân tạo",
+            credits=3
+        )
+
+        course_open_8 = get_or_create_course(
+            code="ITEC4402",
+            name="An toàn thông tin",
+            credits=3
+        )
+
+        course_open_9 = get_or_create_course(
+            code="ENG2001",
+            name="Tiếng Anh chuyên ngành",
+            credits=2
+        )
+
+        course_open_10 = get_or_create_course(
+            code="GEN0001",
+            name="Sinh hoạt đầu khóa",
+            credits=1
+        )
+
+        # 2 lớp trùng lịch để test
+        course_conflict_1 = get_or_create_course(
+            code="ITEC5001",
+            name="Phát triển ứng dụng web",
+            credits=3
+        )
+
+        course_conflict_2 = get_or_create_course(
+            code="ITEC5002",
+            name="Bảo mật ứng dụng",
+            credits=3
+        )
+
+        # =====================================================
+        # 5. COURSE CLASSES
+        # =====================================================
+
+        # 2 lớp thuộc môn sinh viên đã học
+        class_completed_1 = get_or_create_class(
+            course=course_completed_1,
+            semester=active_semester,
+            class_code="ITEC1401-01",
+            max_students=50,
+            current_students=0
+        )
+
+        class_completed_2 = get_or_create_class(
+            course=course_completed_2,
+            semester=active_semester,
+            class_code="ITEC2501-01",
+            max_students=50,
+            current_students=0
+        )
+
+        # 2 lớp đã hết hạn đăng ký học phần
+        class_expired_1 = get_or_create_class(
+            course=course_expired_1,
+            semester=expired_semester,
+            class_code="ITEC2601-EXPIRED",
+            max_students=50,
+            current_students=0
+        )
+
+        class_expired_2 = get_or_create_class(
+            course=course_expired_2,
+            semester=expired_semester,
+            class_code="ITEC2602-EXPIRED",
+            max_students=50,
+            current_students=0
+        )
+
+        # 2 lớp học phần đã đủ số lượng
+        class_full_1 = get_or_create_class(
+            course=course_full_1,
+            semester=active_semester,
+            class_code="ITEC4501-FULL",
+            max_students=50,
+            current_students=50
+        )
+
+        class_full_2 = get_or_create_class(
+            course=course_full_2,
+            semester=active_semester,
+            class_code="ITEC4502-FULL",
+            max_students=50,
+            current_students=50
+        )
+
+        # 10 lớp còn lại đăng ký được
+        class_open_1 = get_or_create_class(
+            course=course_open_1,
+            semester=active_semester,
+            class_code="ITEC2504-01",
+            max_students=50,
+            current_students=0
+        )
+
+        class_open_2 = get_or_create_class(
+            course=course_open_2,
+            semester=active_semester,
+            class_code="MATH1201-01",
+            max_students=50,
+            current_students=0
+        )
+
+        class_open_3 = get_or_create_class(
+            course=course_open_3,
+            semester=active_semester,
+            class_code="ITEC2201-01",
+            max_students=50,
+            current_students=0
+        )
+
+        class_open_4 = get_or_create_class(
+            course=course_open_4,
+            semester=active_semester,
+            class_code="GEN1001-01",
+            max_students=50,
+            current_students=0
+        )
+
+        class_open_5 = get_or_create_class(
+            course=course_open_5,
+            semester=active_semester,
+            class_code="ITEC3301-01",
+            max_students=50,
+            current_students=0
+        )
+
+        class_open_6 = get_or_create_class(
+            course=course_open_6,
+            semester=active_semester,
+            class_code="ITEC3302-01",
+            max_students=50,
+            current_students=0
+        )
+
+        class_open_7 = get_or_create_class(
+            course=course_open_7,
+            semester=active_semester,
+            class_code="ITEC4401-01",
+            max_students=50,
+            current_students=0
+        )
+
+        class_open_8 = get_or_create_class(
+            course=course_open_8,
+            semester=active_semester,
+            class_code="ITEC4402-01",
+            max_students=50,
+            current_students=0
+        )
+
+        class_open_9 = get_or_create_class(
+            course=course_open_9,
+            semester=active_semester,
+            class_code="ENG2001-01",
+            max_students=50,
+            current_students=0
+        )
+
+        class_open_10 = get_or_create_class(
+            course=course_open_10,
+            semester=active_semester,
+            class_code="GEN0001-01",
+            max_students=50,
+            current_students=0
+        )
+
+        # 2 lớp trùng lịch
+        class_conflict_1 = get_or_create_class(
+            course=course_conflict_1,
+            semester=active_semester,
+            class_code="ITEC5001-CONFLICT",
+            max_students=50,
+            current_students=0
+        )
+
+        class_conflict_2 = get_or_create_class(
+            course=course_conflict_2,
+            semester=active_semester,
+            class_code="ITEC5002-CONFLICT",
+            max_students=50,
+            current_students=0
+        )
+
+        # =====================================================
+        # 6. SCHEDULES
+        # =====================================================
+        # Các lớp đăng ký được được xếp lịch không trùng nhau
+        # để sinh viên có thể đăng ký đủ 12, 25 tín chỉ.
+
+        # 2 lớp thuộc môn đã học
+        get_or_create_schedule(class_completed_1, room_a101, 2, 1, 3)
+        get_or_create_schedule(class_completed_2, room_b202, 2, 4, 6)
+
+        # 2 lớp hết hạn đăng ký
+        get_or_create_schedule(class_expired_1, room_c303, 3, 1, 3)
+        get_or_create_schedule(class_expired_2, room_d404, 3, 4, 6)
+
+        # 2 lớp đầy
+        get_or_create_schedule(class_full_1, room_a101, 4, 1, 3)
+        get_or_create_schedule(class_full_2, room_b202, 4, 4, 6)
+
+        # 10 lớp đăng ký được
+        get_or_create_schedule(class_open_1, room_a101, 2, 7, 10)
+        get_or_create_schedule(class_open_2, room_b202, 3, 7, 9)
+        get_or_create_schedule(class_open_3, room_c303, 4, 7, 9)
+        get_or_create_schedule(class_open_4, room_d404, 5, 1, 2)
+        get_or_create_schedule(class_open_5, room_a101, 5, 3, 5)
+        get_or_create_schedule(class_open_6, room_b202, 5, 6, 8)
+        get_or_create_schedule(class_open_7, room_c303, 6, 1, 3)
+        get_or_create_schedule(class_open_8, room_d404, 6, 4, 6)
+        get_or_create_schedule(class_open_9, room_a101, 7, 1, 2)
+        get_or_create_schedule(class_open_10, room_b202, 7, 4, 4)
+
+        # 2 lớp trùng lịch (overlapping với class_open_5: Thứ 5, tiết 3-5)
+        # không trùng với nhau nhưng cả 2 đều trùng với class_open_5
+        get_or_create_schedule(class_conflict_1, room_c303, 5, 1, 3)  # Thứ 5, tiết 1-3 (trùng tiết 3)
+        get_or_create_schedule(class_conflict_2, room_d404, 5, 4, 6)  # Thứ 5, tiết 4-6 (trùng tiết 4-5)
+
+        # =====================================================
+        # 7. COMPLETED COURSES
+        # =====================================================
+        # student01 đã học đúng 2 môn:
+        # - ITEC1401
+        # - ITEC2501
+
+        get_or_create_completed_course(
+            student=student,
+            course=course_completed_1,
+            semester=active_semester,
+            final_score=8.0,
+            status=CompletedCourseStatus.PASSED
+        )
+
+        get_or_create_completed_course(
+            student=student,
+            course=course_completed_2,
+            semester=active_semester,
+            final_score=8.5,
+            status=CompletedCourseStatus.PASSED
+        )
+
+        # =====================================================
+        # 8. PREREQUISITES (seed some prerequisites for testing)
+        # =====================================================
+        # Make ITEC2504 (Lập trình hướng đối tượng) require ITEC1401
+        try:
+            get_or_create_prerequisite(course_open_1, course_completed_1)
+        except Exception:
+            pass
+
+        # Make ITEC2201 (Cơ sở dữ liệu) require ITEC2501
+        try:
+            get_or_create_prerequisite(course_open_3, course_completed_2)
+        except Exception:
+            pass
+
+        # Add an extra prerequisite for testing: make ITEC4401 (Trí tuệ nhân tạo)
+        # require ITEC3301 (Mạng máy tính) which student01 has NOT completed.
+        # This allows testing missing prerequisites for student01 without using student02.
+        try:
+            get_or_create_prerequisite(course_open_7, course_open_5)
+        except Exception:
+            pass
+
+        # =====================================================
+        # 9. SOME INITIAL ENROLLMENTS (to test registered list / cancel flow)
+        # =====================================================
+        def get_or_create_enrollment(student, course_class, semester):
+            en = Enrollment.query.filter_by(
+                student_id=student.id,
+                course_class_id=course_class.id,
+                semester_id=semester.id
+            ).first()
+
+            if en is None:
+                en = Enrollment(
+                    student_id=student.id,
+                    course_class_id=course_class.id,
+                    semester_id=semester.id,
+                    status=EnrollmentStatus.REGISTERED
+                )
+                db.session.add(en)
+                # increment current_students
+                try:
+                    course_class.current_students = (course_class.current_students or 0) + 1
+                except Exception:
+                    pass
+                db.session.flush()
+
+            return en
+
+        # Enroll student01 into two open classes so the registered list is not empty
+        try:
+            get_or_create_enrollment(student, class_open_1, active_semester)
+            get_or_create_enrollment(student, class_open_2, active_semester)
+        except Exception:
+            pass
 
         db.session.commit()
 

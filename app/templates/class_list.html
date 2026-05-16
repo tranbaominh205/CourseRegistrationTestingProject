@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký học phần - Academic System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/class_list.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12.22 2a10 10 0 1 0 9.78 12"></path>
+                    <path d="m19 22-4-4"></path>
+                    <path d="m15 22 4-4"></path>
+                    <path d="M22 22a2 2 0 0 0-2-2"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+            </div>
+            <h1>Đăng ký học phần</h1>
+        </header>
+
+
+        <main>
+            <!-- Available Courses -->
+            <section class="section-card">
+                <div class="section-header">
+                    <h2>Danh sách lớp học phần</h2>
+                </div>
+                <div class="table-container">
+                    <table id="available-courses">
+                        <thead>
+                            <tr class="header-row">
+                                <th style="width: 100px;">Mã lớp</th>
+                                <th>Môn học</th>
+                                <th style="width: 80px;">Số tín chỉ</th>
+                                <th style="width: 100px;">Sĩ số</th>
+                                <th>Lịch học</th>
+                                <th style="width: 100px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in classes %}
+                                <tr>
+                                    <td>{{ c.class_code }}</td>
+                                    <td class="text-left">{{ c.course.name }}</td>
+                                    <td>{{ c.course.credits }}</td>
+                                    <td>{{ c.current_students }} / {{ c.max_students }}</td>
+                                    <td class="text-left">
+                                        {% for s in c.schedules %}
+                                            Thứ {{ s.day_of_week }} ({{ "%02d"|format(s.start_period) }}:00 - {{ "%02d"|format(s.end_period) }}:00), Ph {{ s.room.code }}{% if not loop.last %}<br>{% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        <form method="POST" action="{{ url_for('student.register_class', course_class_id=c.id) }}" style="margin:0">
+                                            <button type="submit" class="btn btn-primary btn-register">Đăng ký</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" style="text-align:center;padding:20px">Hiện chưa có lớp học phần nào.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Registered Courses -->
+            <section class="section-card">
+                <div class="section-header">
+                    <h2>Danh sách môn học đã đăng ký</h2>
+                </div>
+                <div class="table-container">
+                    <table id="registered-courses">
+                        <thead>
+                            <tr>
+                                <th style="width: 100px;">Mã lớp</th>
+                                <th>Môn học</th>
+                                <th style="width: 80px;">Số tín chỉ</th>
+                                <th>Lịch học</th>
+                                <th style="width: 120px;">Ngày đăng ký</th>
+                                <th style="width: 60px;">Hủy</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in enrollments %}
+                                <tr data-enrollment-id="{{ e.id }}" data-credit="{{ e.course_class.course.credits }}">
+                                    <td>{{ e.course_class.class_code }}</td>
+                                    <td class="text-left">{{ e.course_class.course.name }}</td>
+                                    <td>{{ e.course_class.course.credits }}</td>
+                                    <td class="text-left">
+                                        {% for s in e.course_class.schedules %}
+                                            Thứ {{ s.day_of_week }} ({{ "%02d"|format(s.start_period) }}:00 - {{ "%02d"|format(s.end_period) }}:00), Ph {{ s.room.code }}{% if not loop.last %}<br>{% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>{{ e.registered_at.strftime('%d/%m/%Y') if e.registered_at else '—' }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-danger btn-cancel" data-enrollment-id="{{ e.id }}">X</button>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" style="text-align:center;padding:20px">Sinh viên chưa đăng ký môn học nào.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Summary -->
+            <section class="summary-box">
+                <h3 class="summary-title">Tổng kết đăng ký học kỳ</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Số môn đã đăng ký:</span>
+                        <span class="summary-value" id="total-courses">{{ enrollments|length }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Tổng số tín chỉ:</span>
+                        <span class="summary-value" id="total-credits">{{ total_credits }} / 25</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Số tín chỉ tối thiểu:</span>
+                        <span class="summary-value">12</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Confirmation Message -->
+            {% if can_confirm %}
+                <div class="confirmation-message" style="color: green; text-align: center; padding: 10px; margin: 10px 0; background: #d4edda; border-radius: 4px;">
+                    {{ confirm_message }}
+                </div>
+            {% else %}
+                <div class="confirmation-message" style="color: #d32f2f; text-align: center; padding: 10px; margin: 10px 0; background: #ffebee; border-radius: 4px;">
+                    {{ confirm_message }}
+                </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="action-footer">
+                {# Compute how many credits are missing (client display only) #}
+                {% set missing = 12 - total_credits if total_credits is not none else 12 %}
+
+                {% if can_confirm %}
+                    <form id="confirm-form" method="POST" action="{{ url_for('student.confirm_registration') }}">
+                        <button type="submit" class="btn btn-success">Xác nhận đăng ký học kỳ</button>
+                    </form>
+                {% else %}
+                    <form>
+                        <button type="button" class="btn btn-success" disabled aria-disabled="true" title="Bạn chưa đủ số tín chỉ tối thiểu. Cần đăng ký thêm {{ missing if missing>0 else 0 }} tín chỉ">Xác nhận đăng ký học kỳ</button>
+                    </form>
+                {% endif %}
+
+                <a href="{{ url_for('auth.student_dashboard') }}" class="btn btn-secondary">Quay lại dashboard sinh viên</a>
+                <form method="POST" action="{{ url_for('auth.logout') }}">
+                    <button type="submit" class="btn btn-danger-outline">Đăng xuất</button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- Flash Messages as Toast Notifications -->
+    <script>
+      (function() {
+        'use strict';
+
+        // Toast notification function
+        function showToast(message, type) {
+          var container = document.getElementById('toast-container');
+          var toast = document.createElement('div');
+          toast.className = 'toast toast-' + type;
+          toast.textContent = message;
+          container.appendChild(toast);
+
+          setTimeout(function() {
+            toast.classList.add('toast-hide');
+            setTimeout(function() {
+              toast.remove();
+            }, 300);
+          }, 3000);
+        }
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              showToast('{{ message }}', '{{ category }}');
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+      })();
+    </script>
+
+    <script src="{{ url_for('static', filename='js/class_list.js') }}"></script>
+</body>
+</html>
