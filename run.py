@@ -17,6 +17,8 @@ from app.models import (
     CompletedCourse,
     CourseClassStatus,
     CompletedCourseStatus,
+    Enrollment,
+    EnrollmentStatus,
 )
 
 app = create_app()
@@ -189,6 +191,22 @@ def seed_data():
                 db.session.flush()
 
             return completed
+
+        def get_or_create_prerequisite(course, prerequisite_course):
+            pr = CoursePrerequisite.query.filter_by(
+                course_id=course.id,
+                prerequisite_course_id=prerequisite_course.id
+            ).first()
+
+            if pr is None:
+                pr = CoursePrerequisite(
+                    course_id=course.id,
+                    prerequisite_course_id=prerequisite_course.id
+                )
+                db.session.add(pr)
+                db.session.flush()
+
+            return pr
 
         # =====================================================
         # 1. USERS
@@ -594,6 +612,55 @@ def seed_data():
             final_score=8.5,
             status=CompletedCourseStatus.PASSED
         )
+
+        # =====================================================
+        # 8. PREREQUISITES (seed some prerequisites for testing)
+        # =====================================================
+        # Make ITEC2504 (Lập trình hướng đối tượng) require ITEC1401
+        try:
+            get_or_create_prerequisite(course_open_1, course_completed_1)
+        except Exception:
+            pass
+
+        # Make ITEC2201 (Cơ sở dữ liệu) require ITEC2501
+        try:
+            get_or_create_prerequisite(course_open_3, course_completed_2)
+        except Exception:
+            pass
+
+        # =====================================================
+        # 9. SOME INITIAL ENROLLMENTS (to test registered list / cancel flow)
+        # =====================================================
+        def get_or_create_enrollment(student, course_class, semester):
+            en = Enrollment.query.filter_by(
+                student_id=student.id,
+                course_class_id=course_class.id,
+                semester_id=semester.id
+            ).first()
+
+            if en is None:
+                en = Enrollment(
+                    student_id=student.id,
+                    course_class_id=course_class.id,
+                    semester_id=semester.id,
+                    status=EnrollmentStatus.REGISTERED
+                )
+                db.session.add(en)
+                # increment current_students
+                try:
+                    course_class.current_students = (course_class.current_students or 0) + 1
+                except Exception:
+                    pass
+                db.session.flush()
+
+            return en
+
+        # Enroll student01 into two open classes so the registered list is not empty
+        try:
+            get_or_create_enrollment(student, class_open_1, active_semester)
+            get_or_create_enrollment(student, class_open_2, active_semester)
+        except Exception:
+            pass
 
         db.session.commit()
 

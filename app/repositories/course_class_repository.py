@@ -1,4 +1,11 @@
-from app.models import CourseClass, Enrollment, EnrollmentStatus, CompletedCourse, CompletedCourseStatus
+from app.models import (
+    CourseClass,
+    Enrollment,
+    EnrollmentStatus,
+    CompletedCourse,
+    CompletedCourseStatus,
+    CoursePrerequisite,
+)
 
 
 def get_all_classes():
@@ -33,3 +40,8 @@ def has_completed_course(student_id, course_id):
     ).first()
 
     return completed is not None
+
+
+def get_prerequisites(course_id):
+    """Return list of CoursePrerequisite objects for the given course_id."""
+    return CoursePrerequisite.query.filter_by(course_id=course_id).all()
