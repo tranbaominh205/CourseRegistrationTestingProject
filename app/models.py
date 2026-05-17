@@ -65,16 +65,39 @@ class Semester(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     name = db.Column(db.String(50), nullable=False)
+    academic_year = db.Column(db.String(20), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
 
     registration_start_date = db.Column(db.Date, nullable=False)
     registration_end_date = db.Column(db.Date, nullable=False)
-    cancel_deadline = db.Column(db.Date, nullable=False)
 
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
     course_classes = db.relationship("CourseClass", back_populates="semester")
     enrollments = db.relationship("Enrollment", back_populates="semester")
+    major_registration_windows = db.relationship(
+        "MajorRegistrationWindow",
+        back_populates="semester"
+    )
+
+
+class MajorRegistrationWindow(db.Model):
+    __tablename__ = "major_registration_windows"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    semester_id = db.Column(db.Integer, db.ForeignKey("semesters.id"), nullable=False)
+    major = db.Column(db.String(100), nullable=False)
+
+    registration_start_date = db.Column(db.Date, nullable=False)
+    registration_end_date = db.Column(db.Date, nullable=False)
+
+    semester = db.relationship("Semester", back_populates="major_registration_windows")
+
+    __table_args__ = (
+        db.UniqueConstraint("semester_id", "major", name="uq_semester_major_window"),
+    )
 
 
 class Course(db.Model):
@@ -199,7 +222,13 @@ class Enrollment(db.Model):
         default=lambda: datetime.now(UTC)
     )
     cancelled_at = db.Column(db.DateTime, nullable=True)
+    
+    # New fields to store midterm and final scores. Use midterm_score to
+    # determine whether a midterm has been graded (midterm_score is not None).
+    midterm_score = db.Column(db.Float, nullable=True)
+    final_score = db.Column(db.Float, nullable=True)
 
+    # legacy flag left for backward compatibility; logic should prefer midterm_score
     midterm_exam_done = db.Column(db.Boolean, nullable=False, default=False)
 
     student = db.relationship("Student", back_populates="enrollments")
