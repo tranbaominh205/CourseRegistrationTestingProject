@@ -1,4 +1,5 @@
-from datetime import date, datetime, UTC, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from app.extensions import db
 from app.models import CourseClass, Enrollment, EnrollmentStatus, Student, MajorRegistrationWindow
@@ -9,6 +10,9 @@ from app.repositories.course_class_repository import (
     has_completed_course,
     get_prerequisites,
 )
+
+# Vietnam timezone
+VIETNAM_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
 MIN_CREDITS = 12
@@ -141,7 +145,7 @@ def cancel_enrollment(student_id, enrollment_id, current_date=None):
         return None, rule_error
 
     enrollment.status = EnrollmentStatus.CANCELLED
-    enrollment.cancelled_at = datetime.now(UTC)
+    enrollment.cancelled_at = datetime.now(VIETNAM_TZ)
 
     course_class = enrollment.course_class
     if course_class is not None:

@@ -1,7 +1,10 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from flask_login import UserMixin
 from app.extensions import db, login_manager
-from datetime import datetime, UTC
+
+# Vietnam timezone
+VIETNAM_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
 class UserRole:
@@ -35,7 +38,7 @@ class User(db.Model, UserMixin):
     role = db.Column(db.String(20), nullable=False, default=UserRole.STUDENT)
     is_active_account = db.Column(db.Boolean, nullable=False, default=True)
 
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(VIETNAM_TZ))
     student = db.relationship("Student", back_populates="user", uselist=False)
 
     @property
@@ -219,7 +222,7 @@ class Enrollment(db.Model):
     registered_at = db.Column(
         db.DateTime,
         nullable=False,
-        default=lambda: datetime.now(UTC)
+        default=lambda: datetime.now(VIETNAM_TZ)
     )
     cancelled_at = db.Column(db.DateTime, nullable=True)
     
