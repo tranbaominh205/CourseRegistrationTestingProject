@@ -53,6 +53,7 @@ def test_admin_login_success_redirect_to_admin_class_list(app, client):
     response = login(client, "admin01", "123456")
 
     assert response.status_code == 302
+    # app redirects admins to the admin class list at /admin/classes
     assert "/admin/classes" in response.location
 
 

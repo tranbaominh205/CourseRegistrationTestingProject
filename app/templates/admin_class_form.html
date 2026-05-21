@@ -284,18 +284,6 @@
                             {% endfor %}
                         </select>
                     </div>
-
-                    <div class="form-group">
-                        <label>Phòng học</label>
-                        <select name="room_id" required>
-                            {% for room in options.rooms %}
-                                <option value="{{ room.id }}"
-                                    {% if schedule and schedule.room_id == room.id %}selected{% endif %}>
-                                    {{ room.code }} - Sức chứa {{ room.capacity }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
                 </div>
 
                 <h3 class="section-title">Lịch học</h3>
@@ -304,7 +292,7 @@
                     <div class="form-group">
                         <label>Thứ học</label>
                         <select name="day_of_week" required>
-                            {% set days = [(1, 'Chủ Nhật'), (2, 'Thứ 2'), (3, 'Thứ 3'), (4, 'Thứ 4'), (5, 'Thứ 5'), (6, 'Thứ 6'), (7, 'Thứ 7')] %}
+                            {% set days = [(2, 'Thứ 2'), (3, 'Thứ 3'), (4, 'Thứ 4'), (5, 'Thứ 5'), (6, 'Thứ 6'), (7, 'Thứ 7'), (8, 'Chủ Nhật')] %}
                             {% for val, label in days %}
                                 <option value="{{ val }}"
                                     {% if schedule and schedule.day_of_week == val %}selected{% endif %}>
