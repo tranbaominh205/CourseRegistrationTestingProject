@@ -76,9 +76,9 @@
                     </thead>
                     <tbody id="tableBody">
                         {% for c in classes %}
-                            <tr class="searchable-row" data-search="{{ c.class_code }} {{ c.course.code }} {{ c.course.name }}">
+                            <tr class="searchable-row" data-search="{{ c.class_code }} {{ c.course.name }}">
                                 <td class="col-code">{{ c.class_code }}</td>
-                                <td class="col-subject-name">{{ c.course.code }} - {{ c.course.name }}</td>
+                                <td class="col-subject-name">{{ c.course.name }}</td>
                                 <td>{{ c.semester.name }} - {{ c.semester.academic_year }}</td>
                                 <td style="font-weight: 500;">{{ c.current_students }}/{{ c.max_students }}</td>
                                 <td>
@@ -92,7 +92,7 @@
                                     {% if c.schedules %}
                                         {% for s in c.schedules %}
                                             <div>{{ s.room.code }}</div>
-                                            <div class="col-schedule-time">Thứ {{ s.day_of_week }}, Tiết {{ s.start_period }} - {{ s.end_period }}</div>
+                                            <div class="col-schedule-time">{% if s.day_of_week == 1 %}Chủ Nhật{% else %}Thứ {{ s.day_of_week }}{% endif %}, Tiết {{ s.start_period }} - {{ s.end_period }}</div>
                                         {% endfor %}
                                     {% else %}
                                         <div>Chưa có lịch</div>

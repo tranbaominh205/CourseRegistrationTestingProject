@@ -55,7 +55,7 @@
                                         <td>{{ c.current_students }} / {{ c.max_students }}</td>
                                         <td class="text-left">
                                             {% for s in c.schedules %}
-                                                Thứ {{ s.day_of_week }} ({{ "%02d"|format(s.start_period) }}:00 - {{ "%02d"|format(s.end_period) }}:00), Ph {{ s.room.code }}{% if not loop.last %}<br>{% endif %}
+                                                {% if s.day_of_week == 1 %}Chủ Nhật{% else %}Thứ {{ s.day_of_week }}{% endif %} ({{ "%02d"|format(s.start_period) }}:00 - {{ "%02d"|format(s.end_period) }}:00), Ph {{ s.room.code }}{% if not loop.last %}<br>{% endif %}
                                             {% endfor %}
                                         </td>
                                         <td>
@@ -102,7 +102,7 @@
                                     <td>{{ e.course_class.course.credits }}</td>
                                     <td class="text-left"><span class="truncate">
                                         {% for s in e.course_class.schedules %}
-                                            Thứ {{ s.day_of_week }} ({{ "%02d"|format(s.start_period) }}:00 - {{ "%02d"|format(s.end_period) }}:00), Ph {{ s.room.code }}{% if not loop.last %}<br>{% endif %}
+                                            {% if s.day_of_week == 1 %}Chủ Nhật{% else %}Thứ {{ s.day_of_week }}{% endif %} ({{ "%02d"|format(s.start_period) }}:00 - {{ "%02d"|format(s.end_period) }}:00), Ph {{ s.room.code }}{% if not loop.last %}<br>{% endif %}
                                         {% endfor %}
                                         </span></td>
                                     <td>{{ e.registered_at.strftime('%d/%m/%Y') if e.registered_at else '—' }}</td>
