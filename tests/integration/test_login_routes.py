@@ -10,12 +10,11 @@ def create_test_user(
     role=UserRole.STUDENT,
     active=True
 ):
-    user = User(
-        username=username,
-        password_hash=generate_password_hash(password),
-        role=role,
-        is_active_account=active
-    )
+    user = User()
+    user.username = username
+    user.password_hash = generate_password_hash(password)
+    user.role = role
+    user.is_active_account = active
 
     db.session.add(user)
     db.session.commit()
@@ -47,14 +46,14 @@ def test_student_login_success_redirect_to_student_dashboard(app, client):
     assert "/student/dashboard" in response.location
 
 
-def test_admin_login_success_redirect_to_admin_dashboard(app, client):
+def test_admin_login_success_redirect_to_admin_class_list(app, client):
     with app.app_context():
         create_test_user(username="admin01", role=UserRole.ADMIN)
 
     response = login(client, "admin01", "123456")
 
     assert response.status_code == 302
-    assert "/admin/dashboard" in response.location
+    assert "/admin/classes" in response.location
 
 
 def test_login_wrong_password_return_401(app, client):
@@ -84,20 +83,20 @@ def test_guest_cannot_access_student_dashboard(client):
     assert "/login" in response.location
 
 
-def test_guest_cannot_access_admin_dashboard(client):
-    response = client.get("/admin/dashboard", follow_redirects=False)
+def test_guest_cannot_access_admin_class_list(client):
+    response = client.get("/admin/classes", follow_redirects=False)
 
     assert response.status_code == 302
     assert "/login" in response.location
 
 
-def test_student_cannot_access_admin_dashboard(app, client):
+def test_student_cannot_access_admin_class_list(app, client):
     with app.app_context():
         create_test_user()
 
     login(client, "student01", "123456")
 
-    response = client.get("/admin/dashboard")
+    response = client.get("/admin/classes")
 
     assert response.status_code == 403
 
@@ -138,8 +137,8 @@ def test_logged_in_student_access_login_redirect_to_student_dashboard(app, clien
     assert "/student/dashboard" in response.location
 
 
-def test_logged_in_admin_access_login_redirect_to_admin_dashboard(app, client):
-    """Test that a logged-in admin accessing /login redirects to admin dashboard"""
+def test_logged_in_admin_access_login_redirect_to_admin_class_list(app, client):
+    """Test that a logged-in admin accessing /login redirects to admin class list"""
     with app.app_context():
         create_test_user(username="admin01", role=UserRole.ADMIN)
 
@@ -148,4 +147,4 @@ def test_logged_in_admin_access_login_redirect_to_admin_dashboard(app, client):
     response = client.get("/login", follow_redirects=False)
 
     assert response.status_code == 302
-    assert "/admin/dashboard" in response.location
+    assert "/admin/classes" in response.location

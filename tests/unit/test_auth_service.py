@@ -12,12 +12,11 @@ def create_test_user(
     role=UserRole.STUDENT,
     active=True
 ):
-    user = User(
-        username=username,
-        password_hash=generate_password_hash(password),
-        role=role,
-        is_active_account=active
-    )
+    user = User()
+    user.username = username
+    user.password_hash = generate_password_hash(password)
+    user.role = role
+    user.is_active_account = active
 
     db.session.add(user)
     db.session.commit()
@@ -126,7 +125,7 @@ def test_authenticate_user_inactive_account(app):
     "url",
     [
         "/student/dashboard",  # LOGIN_TC10
-        "/admin/dashboard",    # LOGIN_TC11
+        "/admin/classes",      # LOGIN_TC11
     ]
 )
 def test_dashboard_requires_login(client, url):

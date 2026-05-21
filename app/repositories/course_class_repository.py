@@ -14,12 +14,7 @@ def get_all_classes():
 
 
 def get_class_by_id(course_class_id):
-    # Use Session.get to avoid SQLAlchemy legacy Query.get() warning
-    try:
-        return db.session.get(CourseClass, course_class_id)
-    except Exception:
-        # fallback for older SQLAlchemy versions
-        return CourseClass.query.get(course_class_id)
+    return db.session.get(CourseClass, course_class_id)
 
 
 def get_registered_enrollments(student_id, semester_id):
