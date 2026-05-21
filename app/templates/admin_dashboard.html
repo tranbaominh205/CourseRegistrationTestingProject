@@ -2,11 +2,75 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Dashboard</title>
+    <title>Quản lý lớp học phần</title>
 </head>
 <body>
     <h1>Dashboard admin</h1>
     <p>Xin chào admin.</p>
-    <a href="/logout">Logout</a>
+
+    <p>
+        <a href="{{ url_for('admin.create_class') }}">Tạo lớp học phần</a>
+        |
+        <a href="{{ url_for('auth.logout') }}">Logout</a>
+    </p>
+
+    <hr>
+
+    <h2>Quản lý lớp học phần</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p><strong>{{ category }}:</strong> {{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <table border="1" cellpadding="8">
+        <thead>
+            <tr>
+                <th>Mã lớp</th>
+                <th>Môn học</th>
+                <th>Học kỳ</th>
+                <th>Sĩ số</th>
+                <th>Trạng thái</th>
+                <th>Lịch học</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in classes %}
+                <tr>
+                    <td>{{ c.class_code }}</td>
+                    <td>{{ c.course.code }} - {{ c.course.name }}</td>
+                    <td>{{ c.semester.name }} - {{ c.semester.academic_year }}</td>
+                    <td>{{ c.current_students }}/{{ c.max_students }}</td>
+                    <td>{{ c.status }}</td>
+                    <td>
+                        {% for s in c.schedules %}
+                            Phòng {{ s.room.code }}, Thứ {{ s.day_of_week }}, Tiết {{ s.start_period }} - {{ s.end_period }}
+                            <br>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('admin.edit_class', course_class_id=c.id) }}">Sửa</a>
+
+                        <form method="post"
+                              action="{{ url_for('admin.delete_class', course_class_id=c.id) }}"
+                              style="display:inline;">
+                            <button type="submit"
+                                    onclick="return confirm('Bạn có chắc muốn xoá lớp này?')">
+                                Xoá
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="7">Chưa có lớp học phần nào.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </body>
 </html>

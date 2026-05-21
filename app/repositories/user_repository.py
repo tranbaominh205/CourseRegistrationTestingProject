@@ -10,16 +10,15 @@ def get_user_by_username(username):
 
 
 def get_user_by_id(user_id):
-    return User.query.get(user_id)
+    return db.session.get(User, user_id)
 
 
 def create_user(username, password_hash, role, is_active_account=True):
-    user = User(
-        username=username,
-        password_hash=password_hash,
-        role=role,
-        is_active_account=is_active_account
-    )
+    user = User()
+    user.username = username
+    user.password_hash = password_hash
+    user.role = role
+    user.is_active_account = is_active_account
 
     db.session.add(user)
     db.session.commit()

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+
+    <p>
+        <a href="{{ url_for('admin.class_list') }}">Quay lại danh sách</a>
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <p><strong>{{ category }}:</strong> {{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="post">
+        <p>
+            <label>Mã lớp học phần</label><br>
+            <input type="text"
+                   name="class_code"
+                   value="{{ course_class.class_code if course_class else '' }}"
+                   required>
+        </p>
+
+        <p>
+            <label>Môn học</label><br>
+            <select name="course_id" required>
+                {% for course in options.courses %}
+                    <option value="{{ course.id }}"
+                        {% if course_class and course_class.course_id == course.id %}selected{% endif %}>
+                        {{ course.code }} - {{ course.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </p>
+
+        <p>
+            <label>Học kỳ</label><br>
+            <select name="semester_id" required>
+                {% for semester in options.semesters %}
+                    <option value="{{ semester.id }}"
+                        {% if course_class and course_class.semester_id == semester.id %}selected{% endif %}>
+                        {{ semester.name }} - {{ semester.academic_year }}
+                    </option>
+                {% endfor %}
+            </select>
+        </p>
+
+        <p>
+            <label>Số sinh viên tối đa</label><br>
+            <input type="number"
+                   name="max_students"
+                   min="1"
+                   max="50"
+                   value="{{ course_class.max_students if course_class else 50 }}"
+                   required>
+        </p>
+
+        <p>
+            <label>Trạng thái</label><br>
+            <select name="status" required>
+                {% for status in options.statuses %}
+                    <option value="{{ status }}"
+                        {% if course_class and course_class.status == status %}selected{% endif %}>
+                        {{ status }}
+                    </option>
+                {% endfor %}
+            </select>
+        </p>
+
+        <hr>
+
+        <h3>Lịch học</h3>
+
+        <p>
+            <label>Phòng học</label><br>
+            <select name="room_id" required>
+                {% for room in options.rooms %}
+                    <option value="{{ room.id }}"
+                        {% if schedule and schedule.room_id == room.id %}selected{% endif %}>
+                        {{ room.code }} - Sức chứa {{ room.capacity }}
+                    </option>
+                {% endfor %}
+            </select>
+        </p>
+
+        <p>
+            <label>Thứ học</label><br>
+            <select name="day_of_week" required>
+                {% for day in range(2, 9) %}
+                    <option value="{{ day }}"
+                        {% if schedule and schedule.day_of_week == day %}selected{% endif %}>
+                        Thứ {{ day }}
+                    </option>
+                {% endfor %}
+            </select>
+        </p>
+
+        <p>
+            <label>Tiết bắt đầu</label><br>
+            <input type="number"
+                   name="start_period"
+                   min="1"
+                   max="15"
+                   value="{{ schedule.start_period if schedule else 1 }}"
+                   required>
+        </p>
+
+        <p>
+            <label>Tiết kết thúc</label><br>
+            <input type="number"
+                   name="end_period"
+                   min="1"
+                   max="15"
+                   value="{{ schedule.end_period if schedule else 3 }}"
+                   required>
+        </p>
+
+        <button type="submit">Lưu</button>
+    </form>
+</body>
+</html>
