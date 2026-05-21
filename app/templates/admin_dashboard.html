@@ -2,75 +2,154 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Quản lý lớp học phần</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý lớp học phần | Academic Interface System</title>
+    <link rel="stylesheet" href="/static/css/admin_dashboard.css">
 </head>
 <body>
-    <h1>Dashboard admin</h1>
-    <p>Xin chào admin.</p>
 
-    <p>
-        <a href="{{ url_for('admin.create_class') }}">Tạo lớp học phần</a>
-        |
-        <a href="{{ url_for('auth.logout') }}">Logout</a>
-    </p>
+    <header class="app-header" id="appHeader">
+        <div class="header-brand">
+            <div class="logo-circle">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+            </div>
+            <h1 id="headerTitle">MONOENROLL</h1>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('auth.logout') }}" class="text-btn-secondary">
+                <span>Đăng xuất</span>
+            </a>
+        </div>
+    </header>
 
-    <hr>
+    <section class="hero-banner" id="heroBanner">
+        <div class="hero-content">
+            <h2 id="mainHeading">QUẢN LÝ LỚP HỌC PHẦN</h2>
+            <p id="subHeading">
+                Hệ thống quản trị danh sách lớp học phần, điều chỉnh thông tin đăng ký, sĩ số và thời khóa biểu cho các học kỳ hiện tại và sắp tới.
+            </p>
+        </div>
+    </section>
 
-    <h2>Quản lý lớp học phần</h2>
+    <main class="app-main">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <p><strong>{{ category }}:</strong> {{ message }}</p>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+        <div class="control-card" id="controlCard">
+            <div class="control-buttons-group">
+                <a href="{{ url_for('admin.create_class') }}" class="btn-primary">
+                    Tạo lớp học phần
+                </a>
+            </div>
+            <div class="search-wrapper">
+                <span class="material-symbols-outlined search-icon">search</span>
+                <input type="text" class="input-search" id="searchInput" placeholder="Tìm kiếm lớp học phần...">
+            </div>
+        </div>
 
-    <table border="1" cellpadding="8">
-        <thead>
-            <tr>
-                <th>Mã lớp</th>
-                <th>Môn học</th>
-                <th>Học kỳ</th>
-                <th>Sĩ số</th>
-                <th>Trạng thái</th>
-                <th>Lịch học</th>
-                <th>Thao tác</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for c in classes %}
-                <tr>
-                    <td>{{ c.class_code }}</td>
-                    <td>{{ c.course.code }} - {{ c.course.name }}</td>
-                    <td>{{ c.semester.name }} - {{ c.semester.academic_year }}</td>
-                    <td>{{ c.current_students }}/{{ c.max_students }}</td>
-                    <td>{{ c.status }}</td>
-                    <td>
-                        {% for s in c.schedules %}
-                            Phòng {{ s.room.code }}, Thứ {{ s.day_of_week }}, Tiết {{ s.start_period }} - {{ s.end_period }}
-                            <br>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div style="margin-bottom: 16px;">
+                    {% for category, message in messages %}
+                        <div style="background-color: {% if category == 'success' %}#e6f6ec{% else %}#ffdad6{% endif %}; color: {% if category == 'success' %}#117d3b{% else %}#93000a{% endif %}; padding: 12px 16px; border-radius: 8px; border-left: 4px solid {% if category == 'success' %}#117d3b{% else %}#ba1a1a{% endif %}; margin-bottom: 8px;">
+                            <strong>{{ category.upper() }}:</strong> {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="table-card" id="tableCard">
+            <div class="table-responsive">
+                <table class="data-table" id="classesTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%">Mã lớp học phần</th>
+                            <th style="width: 28%">Môn học</th>
+                            <th style="width: 18%">Học kỳ</th>
+                            <th style="width: 10%">Sĩ số</th>
+                            <th style="width: 11%">Trạng thái</th>
+                            <th style="width: 18%">Lịch học</th>
+                            <th style="width: 10%; text-align: center;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        {% for c in classes %}
+                            <tr class="searchable-row" data-search="{{ c.class_code }} {{ c.course.code }} {{ c.course.name }}">
+                                <td class="col-code">{{ c.class_code }}</td>
+                                <td class="col-subject-name">{{ c.course.code }} - {{ c.course.name }}</td>
+                                <td>{{ c.semester.name }} - {{ c.semester.academic_year }}</td>
+                                <td style="font-weight: 500;">{{ c.current_students }}/{{ c.max_students }}</td>
+                                <td>
+                                    {% if c.status == 'OPEN' %}
+                                        <span class="badge badge-open">OPEN</span>
+                                    {% else %}
+                                        <span class="badge badge-closed">CLOSED</span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-schedule-room">
+                                    {% if c.schedules %}
+                                        {% for s in c.schedules %}
+                                            <div>{{ s.room.code }}</div>
+                                            <div class="col-schedule-time">Thứ {{ s.day_of_week }}, Tiết {{ s.start_period }} - {{ s.end_period }}</div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div>Chưa có lịch</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-buttons-cell">
+                                        <a href="{{ url_for('admin.edit_class', course_class_id=c.id) }}" class="action-btn btn-edit" title="Sửa">
+                                            <span class="material-symbols-outlined">edit_square</span>
+                                        </a>
+                                        <form method="post" action="{{ url_for('admin.delete_class', course_class_id=c.id) }}" style="display:inline; margin: 0;">
+                                            <button type="submit" class="action-btn btn-delete" title="Xóa" onclick="return confirm('Bạn có chắc chắn muốn xóa lớp học phần này?')">
+                                                <span class="material-symbols-outlined">delete</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: #43474f; padding: 48px;">
+                                    <span class="material-symbols-outlined" style="font-size: 40px; margin-bottom: 8px; display: block;">database_off</span>
+                                    Không tìm thấy lớp học phần nào.
+                                </td>
+                            </tr>
                         {% endfor %}
-                    </td>
-                    <td>
-                        <a href="{{ url_for('admin.edit_class', course_class_id=c.id) }}">Sửa</a>
+                    </tbody>
+                </table>
+            </div>
 
-                        <form method="post"
-                              action="{{ url_for('admin.delete_class', course_class_id=c.id) }}"
-                              style="display:inline;">
-                            <button type="submit"
-                                    onclick="return confirm('Bạn có chắc muốn xoá lớp này?')">
-                                Xoá
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-            {% else %}
-                <tr>
-                    <td colspan="7">Chưa có lớp học phần nào.</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            <div class="table-footer" id="tableFooter">
+                <span class="info-text" id="tableInfo">Hiển thị {{ classes|length }} lớp học phần</span>
+                <div class="pagination-controls" id="paginationGroup"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="app-footer" id="appFooter">
+        <div class="footer-content">
+            <div class="footer-left">
+                Course Registration System
+            </div>
+
+            <div class="footer-center">
+
+
+            </div>
+
+            <div class="footer-right">
+                 <span> © 2026 Tran Bao Minh. All Rights Reserved.</span>
+            </div>
+        </div>
+    </footer>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="/static/js/admin_dashboard.js"></script>
 </body>
 </html>

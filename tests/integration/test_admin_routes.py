@@ -60,7 +60,7 @@ def test_admin_can_access_admin_classes(app, client):
         response = client.get("/admin/classes")
 
         assert response.status_code == 200
-        assert "Dashboard admin".encode("utf-8") in response.data
+        assert "Academic Interface System".encode("utf-8") in response.data
         assert "Quản lý lớp học phần".encode("utf-8") in response.data
 
 
