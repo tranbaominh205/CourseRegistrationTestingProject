@@ -18,3 +18,4 @@ def role_required(role):
         return wrapper
 
     return decorator
+

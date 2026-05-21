@@ -18,7 +18,7 @@ def login():
     # If user is already logged in, redirect to appropriate dashboard
     if current_user.is_authenticated:
         if current_user.role == UserRole.ADMIN:
-            return redirect(url_for("auth.admin_dashboard"))
+            return redirect(url_for("admin.class_list"))
         return redirect(url_for("auth.student_dashboard"))
     
     if request.method == "GET":
@@ -37,7 +37,7 @@ def login():
     login_user(user)
 
     if user.role == UserRole.ADMIN:
-        return redirect(url_for("auth.admin_dashboard"))
+        return redirect(url_for("admin.class_list"))
 
     return redirect(url_for("auth.student_dashboard"))
 
@@ -69,8 +69,3 @@ def student_dashboard():
     )
 
 
-@auth_bp.route("/admin/dashboard")
-@login_required
-@role_required(UserRole.ADMIN)
-def admin_dashboard():
-    return render_template("admin_dashboard.html")

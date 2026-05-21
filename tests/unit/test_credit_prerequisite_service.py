@@ -25,7 +25,11 @@ from app.services.enrollment_service import (
 
 
 def create_user_and_student(username="student01"):
-    user = User(username=username, password_hash="x", role=UserRole.STUDENT, is_active_account=True)
+    user = User()
+    user.username = username
+    user.password_hash = "x"
+    user.role = UserRole.STUDENT
+    user.is_active_account = True
     db.session.add(user)
     db.session.flush()
 

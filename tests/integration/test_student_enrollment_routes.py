@@ -18,7 +18,11 @@ from app.models import (
 
 
 def create_user(username, password="123456", role=UserRole.STUDENT, active=True):
-    user = User(username=username, password_hash=generate_password_hash(password), role=role, is_active_account=active)
+    user = User()
+    user.username = username
+    user.password_hash = generate_password_hash(password)
+    user.role = role
+    user.is_active_account = active
     db.session.add(user)
     db.session.flush()
     return user
