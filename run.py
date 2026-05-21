@@ -386,6 +386,13 @@ def seed_data():
             credits=3
         )
 
+        # 1 môn đã học khác dùng làm điều kiện tiên quyết cho môn mới
+        course_prereq_new = get_or_create_course(
+            code="ITEC1501",
+            name="Nhập môn hệ thống máy tính",
+            credits=3
+        )
+
         # 2 môn hết hạn đăng ký học phần
         course_expired_1 = get_or_create_course(
             code="ITEC2601",
@@ -500,6 +507,13 @@ def seed_data():
             credits=3
         )
 
+        # Môn mới cần điều kiện tiên quyết để test đăng ký thành công
+        course_prereq_target = get_or_create_course(
+            code="ITEC3503",
+            name="Phát triển hệ thống",
+            credits=3
+        )
+
         # =====================================================
         # 5. COURSE CLASSES
         # =====================================================
@@ -517,6 +531,32 @@ def seed_data():
             course=course_completed_2,
             semester=hk1,
             class_code="ITEC2501-HK1",
+            max_students=50,
+            current_students=0
+        )
+
+        class_prereq_new = get_or_create_class(
+            course=course_prereq_new,
+            semester=hk1,
+            class_code="ITEC1501-HK1",
+            max_students=50,
+            current_students=0
+        )
+
+        # 2 lớp ở HK II cho đúng các môn sinh viên đã học ở HK I
+        # dùng để test chức năng không cho đăng ký lại môn đã hoàn thành
+        class_completed_1_hk2 = get_or_create_class(
+            course=course_completed_1,
+            semester=hk2,
+            class_code="ITEC1401-HK2",
+            max_students=50,
+            current_students=0
+        )
+
+        class_completed_2_hk2 = get_or_create_class(
+            course=course_completed_2,
+            semester=hk2,
+            class_code="ITEC2501-HK2",
             max_students=50,
             current_students=0
         )
@@ -680,6 +720,14 @@ def seed_data():
             current_students=0
         )
 
+        class_prereq_target = get_or_create_class(
+            course=course_prereq_target,
+            semester=hk2,
+            class_code="ITEC3503-01",
+            max_students=50,
+            current_students=0
+        )
+
         # =====================================================
         # 6. SCHEDULES
         # =====================================================
@@ -689,6 +737,13 @@ def seed_data():
         # 2 lớp thuộc môn đã học
         get_or_create_schedule(class_completed_1, room_a101, 2, 1, 3)
         get_or_create_schedule(class_completed_2, room_b202, 2, 4, 6)
+
+        # Lớp điều kiện tiên quyết đã học (HK I)
+        get_or_create_schedule(class_prereq_new, room_a101, 1, 1, 3)
+
+        # 2 lớp HK II cho các môn đã học (không trùng lịch với các lớp còn lại)
+        get_or_create_schedule(class_completed_1_hk2, room_c303, 1, 1, 3)
+        get_or_create_schedule(class_completed_2_hk2, room_d404, 1, 4, 6)
 
         # 2 lớp hết hạn đăng ký
         get_or_create_schedule(class_expired_1, room_c303, 3, 1, 3)
@@ -714,6 +769,9 @@ def seed_data():
         # không trùng với nhau nhưng cả 2 đều trùng với class_open_5
         get_or_create_schedule(class_conflict_1, room_c303, 5, 1, 3)  # Thứ 5, tiết 1-3 (trùng tiết 3)
         get_or_create_schedule(class_conflict_2, room_d404, 5, 4, 6)  # Thứ 5, tiết 4-6 (trùng tiết 4-5)
+
+        # Lớp môn mới cần tiên quyết, chọn lịch riêng để student01 có thể đăng ký
+        get_or_create_schedule(class_prereq_target, room_b202, 1, 7, 9)
 
         # schedule for future class (any slot)
         try:
@@ -751,6 +809,14 @@ def seed_data():
             status=CompletedCourseStatus.PASSED
         )
 
+        get_or_create_completed_course(
+            student=student,
+            course=course_prereq_new,
+            semester=hk1,
+            final_score=8.2,
+            status=CompletedCourseStatus.PASSED
+        )
+
         # =====================================================
         # 8. PREREQUISITES (seed some prerequisites for testing)
         # =====================================================
@@ -763,6 +829,12 @@ def seed_data():
         # Make ITEC2201 (Cơ sở dữ liệu) require ITEC2501
         try:
             get_or_create_prerequisite(course_open_3, course_completed_2)
+        except Exception:
+            pass
+
+        # Môn mới ITEC3503 cần ITEC1501, và student01 đã học ITEC1501
+        try:
+            get_or_create_prerequisite(course_prereq_target, course_prereq_new)
         except Exception:
             pass
 

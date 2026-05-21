@@ -237,13 +237,31 @@ def register_course(student_id, course_class_id, current_date=None):
     if course_class.current_students >= course_class.max_students:
         return None, "Lớp học phần đã đủ số lượng"
 
-    existed_enrollment = get_enrollment_by_student_and_class(
-        student_id,
-        course_class_id
-    )
+    # Check if already registered for this class (REGISTERED status only)
+    existed_enrollment = Enrollment.query.filter_by(
+        student_id=student_id,
+        course_class_id=course_class_id,
+        status=EnrollmentStatus.REGISTERED
+    ).first()
 
     if existed_enrollment is not None:
         return None, "Sinh viên đã đăng ký lớp học phần này"
+
+    # Check if there's a cancelled enrollment - if so, reactivate it instead of creating new
+    cancelled_enrollment = Enrollment.query.filter_by(
+        student_id=student_id,
+        course_class_id=course_class_id,
+        status=EnrollmentStatus.CANCELLED
+    ).first()
+
+    if cancelled_enrollment is not None:
+        # Reactivate the cancelled enrollment
+        cancelled_enrollment.status = EnrollmentStatus.REGISTERED
+        cancelled_enrollment.registered_at = datetime.now(VIETNAM_TZ)
+        cancelled_enrollment.cancelled_at = None
+        course_class.current_students += 1
+        db.session.commit()
+        return cancelled_enrollment, None
 
     same_course_enrollment = Enrollment.query.join(
         CourseClass

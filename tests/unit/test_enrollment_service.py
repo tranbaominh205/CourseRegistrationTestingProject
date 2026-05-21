@@ -21,11 +21,16 @@ from app.services.enrollment_service import (
     validate_cancel_draft,
     calculate_credits_after_pending_cancel,
     cancel_pending_enrollments,
+    can_cancel_enrollment,
 )
 
 
 def create_user_and_student(username="student01", major=None):
-    user = User(username=username, password_hash="x", role=UserRole.STUDENT, is_active_account=True)
+    user = User()
+    user.username = username
+    user.password_hash = "x"
+    user.role = UserRole.STUDENT
+    user.is_active_account = True
     db.session.add(user)
     db.session.flush()
 
@@ -351,6 +356,62 @@ def test_validate_cancel_draft_already_cancelled(app):
         assert error == "Học phần này đã bị hủy trước đó."
 
 
+def test_cancel_allowed_on_fourteenth_day_from_semester_start(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="cancel-day14")
+        today = date.today()
+        semester = Semester(
+            name="DAY14",
+            academic_year="2026",
+            start_date=today - timedelta(days=14),
+            end_date=today + timedelta(days=100),
+            registration_start_date=today - timedelta(days=20),
+            registration_end_date=today + timedelta(days=10),
+            is_active=True,
+        )
+        db.session.add(semester)
+        db.session.commit()
+
+        course, course_class = create_course_and_class(code="CXL14", semester=semester)
+        enrollment = add_enrollment(student, course_class, semester)
+
+        ok, error = can_cancel_enrollment(student.id, enrollment.id, current_date=today)
+        cancelled_ids, messages = cancel_pending_enrollments(student.id, [enrollment.id], current_date=today)
+
+        assert ok is True
+        assert error is None
+        assert messages == []
+        assert cancelled_ids == [enrollment.id]
+
+
+def test_cancel_blocked_after_fourteenth_day_from_semester_start(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="cancel-day15")
+        today = date.today()
+        semester = Semester(
+            name="DAY15",
+            academic_year="2026",
+            start_date=today - timedelta(days=15),
+            end_date=today + timedelta(days=100),
+            registration_start_date=today - timedelta(days=20),
+            registration_end_date=today + timedelta(days=10),
+            is_active=True,
+        )
+        db.session.add(semester)
+        db.session.commit()
+
+        course, course_class = create_course_and_class(code="CXL15", semester=semester)
+        enrollment = add_enrollment(student, course_class, semester)
+
+        ok, error = can_cancel_enrollment(student.id, enrollment.id, current_date=today)
+        cancelled_ids, messages = cancel_pending_enrollments(student.id, [enrollment.id], current_date=today)
+
+        assert ok is False
+        assert error == "Đã quá hạn hủy đăng ký học phần."
+        assert cancelled_ids == []
+        assert messages == ["Đã quá hạn hủy đăng ký học phần."]
+
+
 def test_calculate_credits_after_pending_cancel_no_pending(app):
     with app.app_context():
         user, student = create_user_and_student(username="credit-none")
@@ -472,3 +533,64 @@ def test_cancel_pending_enrollments_midterm_blocked(app):
         assert refreshed_class.current_students == 1
 
 
+def test_re_register_after_cancel_reactivates_old_enrollment(app):
+    """Test that re-registering after cancellation reactivates the cancelled enrollment instead of creating a new one."""
+    with app.app_context():
+        from app.services.enrollment_service import cancel_pending_enrollments
+        
+        user, student = create_user_and_student(username="reregister-test")
+        semester = create_semester()
+        course, course_class = create_course_and_class(code="REREG01", semester=semester, current_students=0)
+
+        # Initial registration
+        enrollment_1, error_1 = register_course(student.id, course_class.id, current_date=date.today())
+        assert error_1 is None
+        assert enrollment_1 is not None
+        initial_id = enrollment_1.id
+        
+        # Verify current_students incremented
+        refreshed_class = db.session.get(CourseClass, course_class.id)
+        assert refreshed_class.current_students == 1
+
+        # Cancel the enrollment
+        cancelled_ids, cancel_messages = cancel_pending_enrollments(
+            student.id, 
+            [enrollment_1.id],
+            current_date=date.today()
+        )
+        assert cancelled_ids == [initial_id]
+        assert cancel_messages == []
+        
+        # Verify status changed to CANCELLED
+        cancelled_enrollment = db.session.get(Enrollment, initial_id)
+        assert cancelled_enrollment.status == EnrollmentStatus.CANCELLED
+        
+        # Verify current_students decremented
+        refreshed_class = db.session.get(CourseClass, course_class.id)
+        assert refreshed_class.current_students == 0
+
+        # Re-register for the same class
+        enrollment_2, error_2 = register_course(student.id, course_class.id, current_date=date.today())
+        assert error_2 is None
+        assert enrollment_2 is not None
+        
+        # Verify it's the SAME enrollment record (same ID)
+        assert enrollment_2.id == initial_id
+        
+        # Verify status changed back to REGISTERED
+        refreshed_enrollment = db.session.get(Enrollment, initial_id)
+        assert refreshed_enrollment.status == EnrollmentStatus.REGISTERED
+        assert refreshed_enrollment.registered_at is not None
+        assert refreshed_enrollment.cancelled_at is None
+        
+        # Verify current_students incremented again
+        refreshed_class = db.session.get(CourseClass, course_class.id)
+        assert refreshed_class.current_students == 1
+        
+        # Verify only 1 enrollment record exists for this student-class pair
+        all_enrollments = Enrollment.query.filter_by(
+            student_id=student.id,
+            course_class_id=course_class.id
+        ).all()
+        assert len(all_enrollments) == 1
+        assert all_enrollments[0].id == initial_id
