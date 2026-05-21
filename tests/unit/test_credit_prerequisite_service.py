@@ -19,6 +19,8 @@ from app.services.enrollment_service import (
     register_course,
     can_confirm_registration,
     calculate_registered_credits,
+    MIN_CREDITS,
+    MAX_CREDITS,
 )
 
 
@@ -38,10 +40,11 @@ def create_semester():
     today = date.today()
     semester = Semester(
         name="TS",
+        academic_year="2026",
         start_date=today,
+        end_date=today + timedelta(days=100),
         registration_start_date=today - timedelta(days=10),
         registration_end_date=today + timedelta(days=10),
-        cancel_deadline=today + timedelta(days=30),
         is_active=True,
     )
     db.session.add(semester)
@@ -107,6 +110,11 @@ def add_prerequisite(course, prerequisite_course):
 # =====================================================
 
 
+def test_credit_limit_constants_are_defined():
+    assert MIN_CREDITS == 12
+    assert MAX_CREDITS == 25
+
+
 def test_credit_confirm_zero_credits(app):
     # CREDIT_TC01: tổng tín chỉ = 0, xác nhận fail
     with app.app_context():
@@ -150,6 +158,8 @@ def test_credit_confirm_12_credits_pass(app):
 
         add_enrollment(student, class_c1, semester)
         add_enrollment(student, class_c2, semester)
+
+        assert calculate_registered_credits(student.id, semester.id) == 12
 
         can_confirm, message = can_confirm_registration(student.id, semester.id)
 

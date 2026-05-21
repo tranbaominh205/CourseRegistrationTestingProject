@@ -1,7 +1,8 @@
-from datetime import date
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from app.extensions import db
-from app.models import Enrollment, EnrollmentStatus
+from app.models import CourseClass, Enrollment, EnrollmentStatus, Student, MajorRegistrationWindow
 from app.repositories.course_class_repository import (
     get_class_by_id,
     get_registered_enrollments,
@@ -9,6 +10,35 @@ from app.repositories.course_class_repository import (
     has_completed_course,
     get_prerequisites,
 )
+
+# Vietnam timezone
+VIETNAM_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+MIN_CREDITS = 12
+MAX_CREDITS = 25
+
+
+def _normalize_enrollment_ids(enrollment_ids):
+    normalized = []
+    seen = set()
+
+    if not enrollment_ids:
+        return normalized
+
+    for enrollment_id in enrollment_ids:
+        try:
+            normalized_id = int(enrollment_id)
+        except (TypeError, ValueError):
+            continue
+
+        if normalized_id in seen:
+            continue
+
+        seen.add(normalized_id)
+        normalized.append(normalized_id)
+
+    return normalized
 
 
 def is_period_overlap(start_1, end_1, start_2, end_2):
@@ -42,6 +72,153 @@ def calculate_registered_credits(student_id, semester_id):
     return total
 
 
+def calculate_credits_after_pending_cancel(student_id, semester_id, pending_cancel_ids):
+    registered_enrollments = get_registered_enrollments(student_id, semester_id)
+    pending_ids = set(_normalize_enrollment_ids(pending_cancel_ids))
+
+    total = 0
+    for enrollment in registered_enrollments:
+        if enrollment.id in pending_ids:
+            continue
+        total += enrollment.course_class.course.credits
+
+    return total
+
+
+def get_registration_window_dates(student, semester):
+    if student is not None and student.major:
+        major_window = MajorRegistrationWindow.query.filter_by(
+            semester_id=semester.id,
+            major=student.major
+        ).first()
+        if major_window is not None:
+            return major_window.registration_start_date, major_window.registration_end_date
+
+    # Fallback to semester-level window to keep backward compatibility.
+    return semester.registration_start_date, semester.registration_end_date
+
+
+def validate_registration_window(student, semester, current_date):
+    registration_start_date, registration_end_date = get_registration_window_dates(student, semester)
+
+    if current_date < registration_start_date:
+        return "Chưa đến thời gian đăng ký học phần"
+
+    if current_date > registration_end_date:
+        return "Đã hết hạn đăng ký học phần"
+
+    return None
+
+
+def validate_cancel_draft(student_id, enrollment_id):
+    try:
+        enrollment_id = int(enrollment_id)
+    except (TypeError, ValueError):
+        return None, "Không tìm thấy đăng ký học phần."
+
+    enrollment = db.session.get(Enrollment, enrollment_id)
+    if enrollment is None:
+        return None, "Không tìm thấy đăng ký học phần."
+
+    if enrollment.student_id != student_id:
+        return None, "Bạn không có quyền hủy đăng ký này."
+
+    if enrollment.status == EnrollmentStatus.CANCELLED:
+        return None, "Học phần này đã bị hủy trước đó."
+
+    if enrollment.status != EnrollmentStatus.REGISTERED:
+        return None, "Không tìm thấy đăng ký học phần."
+
+    return enrollment, None
+
+
+def cancel_enrollment(student_id, enrollment_id, current_date=None):
+    if current_date is None:
+        current_date = date.today()
+
+    enrollment, error = validate_cancel_draft(student_id, enrollment_id)
+    if error is not None:
+        return None, error
+    # reuse shared checks
+    rule_error = _validate_cancel_rules(enrollment, current_date=current_date)
+    if rule_error is not None:
+        return None, rule_error
+
+    enrollment.status = EnrollmentStatus.CANCELLED
+    enrollment.cancelled_at = datetime.now(VIETNAM_TZ)
+
+    course_class = enrollment.course_class
+    if course_class is not None:
+        current_students = course_class.current_students or 0
+        course_class.current_students = max(0, current_students - 1)
+
+    return enrollment, None
+
+
+def _validate_cancel_rules(enrollment, current_date=None):
+    """Return error message string if cancellation not allowed, otherwise None."""
+    if current_date is None:
+        current_date = date.today()
+
+    semester = enrollment.semester
+    if semester is None:
+        return "Không tìm thấy đăng ký học phần."
+
+    try:
+        calculated_deadline = semester.start_date + timedelta(days=14)
+    except Exception:
+        return "Đã quá hạn hủy đăng ký học phần."
+
+    if current_date > calculated_deadline:
+        return "Đã quá hạn hủy đăng ký học phần."
+
+    if getattr(enrollment, 'midterm_score', None) is not None or enrollment.midterm_exam_done:
+        return "Không thể hủy vì học phần đã có điểm giữa kỳ."
+
+    return None
+
+
+def can_cancel_enrollment(student_id, enrollment_id, current_date=None):
+    """Check whether an enrollment can be cancelled (for UI pre-validation).
+    Returns (True, None) if ok; otherwise (False, error_message).
+    Does NOT change DB state.
+    """
+    if current_date is None:
+        current_date = date.today()
+
+    enrollment, error = validate_cancel_draft(student_id, enrollment_id)
+    if error is not None:
+        return False, error
+
+    rule_error = _validate_cancel_rules(enrollment, current_date=current_date)
+    if rule_error is not None:
+        return False, rule_error
+
+    return True, None
+
+
+def cancel_pending_enrollments(student_id, enrollment_ids, current_date=None):
+    if current_date is None:
+        current_date = date.today()
+
+    cancelled_ids = []
+    messages = []
+
+    for enrollment_id in _normalize_enrollment_ids(enrollment_ids):
+        enrollment, error = cancel_enrollment(student_id, enrollment_id, current_date=current_date)
+        if error is not None:
+            messages.append(error)
+            continue
+
+        if enrollment is not None:
+            cancelled_ids.append(enrollment.id)
+
+    if cancelled_ids:
+        db.session.commit()
+
+    return cancelled_ids, messages
+
+
 def register_course(student_id, course_class_id, current_date=None):
     if current_date is None:
         current_date = date.today()
@@ -52,20 +229,51 @@ def register_course(student_id, course_class_id, current_date=None):
         return None, "Không tìm thấy lớp học phần"
 
     semester = course_class.semester
-
-    if current_date > semester.registration_end_date:
-        return None, "Đã hết hạn đăng ký học phần"
+    student = db.session.get(Student, student_id)
+    window_error = validate_registration_window(student, semester, current_date)
+    if window_error is not None:
+        return None, window_error
 
     if course_class.current_students >= course_class.max_students:
         return None, "Lớp học phần đã đủ số lượng"
 
-    existed_enrollment = get_enrollment_by_student_and_class(
-        student_id,
-        course_class_id
-    )
+    # Check if already registered for this class (REGISTERED status only)
+    existed_enrollment = Enrollment.query.filter_by(
+        student_id=student_id,
+        course_class_id=course_class_id,
+        status=EnrollmentStatus.REGISTERED
+    ).first()
 
     if existed_enrollment is not None:
         return None, "Sinh viên đã đăng ký lớp học phần này"
+
+    # Check if there's a cancelled enrollment - if so, reactivate it instead of creating new
+    cancelled_enrollment = Enrollment.query.filter_by(
+        student_id=student_id,
+        course_class_id=course_class_id,
+        status=EnrollmentStatus.CANCELLED
+    ).first()
+
+    if cancelled_enrollment is not None:
+        # Reactivate the cancelled enrollment
+        cancelled_enrollment.status = EnrollmentStatus.REGISTERED
+        cancelled_enrollment.registered_at = datetime.now(VIETNAM_TZ)
+        cancelled_enrollment.cancelled_at = None
+        course_class.current_students += 1
+        db.session.commit()
+        return cancelled_enrollment, None
+
+    same_course_enrollment = Enrollment.query.join(
+        CourseClass
+    ).filter(
+        Enrollment.student_id == student_id,
+        Enrollment.semester_id == semester.id,
+        Enrollment.status == EnrollmentStatus.REGISTERED,
+        CourseClass.course_id == course_class.course_id,
+    ).first()
+
+    if same_course_enrollment is not None:
+        return None, "Sinh viên đã đăng ký môn học này ở lớp khác"
 
     if has_completed_course(student_id, course_class.course_id):
         return None, "Sinh viên đã học môn này rồi"
@@ -90,7 +298,7 @@ def register_course(student_id, course_class_id, current_date=None):
     current_credits = calculate_registered_credits(student_id, semester.id)
     new_course_credits = course_class.course.credits
 
-    if current_credits + new_course_credits > 25:
+    if current_credits + new_course_credits > MAX_CREDITS:
         return None, "Tổng số tín chỉ vượt quá giới hạn cho phép"
 
     existing_enrollments = get_registered_enrollments(
@@ -117,13 +325,16 @@ def register_course(student_id, course_class_id, current_date=None):
     return enrollment, None
 
 
-def can_confirm_registration(student_id, semester_id):
-    total_credits = calculate_registered_credits(student_id, semester_id)
+def can_confirm_registration(student_id, semester_id, total_credits=None):
+    if total_credits is None:
+        total_credits = calculate_registered_credits(student_id, semester_id)
 
-    if total_credits < 12:
-        return False, f"Bạn chưa đủ số tín chỉ tối thiểu. Cần đăng ký thêm {12 - total_credits} tín chỉ"
+    if total_credits < MIN_CREDITS:
+        return False, (
+            f"Bạn chưa đủ số tín chỉ tối thiểu. Cần đăng ký thêm {MIN_CREDITS - total_credits} tín chỉ"
+        )
 
-    if total_credits > 25:
+    if total_credits > MAX_CREDITS:
         return False, "Tổng số tín chỉ vượt quá giới hạn cho phép"
 
     return True, "Bạn đã đủ điều kiện xác nhận đăng ký học kỳ"

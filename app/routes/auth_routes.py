@@ -15,6 +15,12 @@ INVALID_CREDENTIAL_ERRORS = {
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
+    # If user is already logged in, redirect to appropriate dashboard
+    if current_user.is_authenticated:
+        if current_user.role == UserRole.ADMIN:
+            return redirect(url_for("auth.admin_dashboard"))
+        return redirect(url_for("auth.student_dashboard"))
+    
     if request.method == "GET":
         return render_template("login.html")
 
