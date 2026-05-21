@@ -123,3 +123,29 @@ def test_logout_redirect_to_login(app, client):
 
     assert response.status_code == 302
     assert "/login" in response.location
+
+
+def test_logged_in_student_access_login_redirect_to_student_dashboard(app, client):
+    """Test that a logged-in student accessing /login redirects to student dashboard"""
+    with app.app_context():
+        create_test_user()
+
+    login(client, "student01", "123456")
+
+    response = client.get("/login", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert "/student/dashboard" in response.location
+
+
+def test_logged_in_admin_access_login_redirect_to_admin_dashboard(app, client):
+    """Test that a logged-in admin accessing /login redirects to admin dashboard"""
+    with app.app_context():
+        create_test_user(username="admin01", role=UserRole.ADMIN)
+
+    login(client, "admin01", "123456")
+
+    response = client.get("/login", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert "/admin/dashboard" in response.location

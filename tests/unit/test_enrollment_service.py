@@ -1,4 +1,3 @@
-import pytest
 from datetime import date, timedelta
 
 from app.extensions import db
@@ -14,17 +13,33 @@ from app.models import (
     CompletedCourseStatus,
     Enrollment,
     EnrollmentStatus,
+    MajorRegistrationWindow,
 )
 
 from app.services.enrollment_service import register_course
+from app.services.enrollment_service import (
+    validate_cancel_draft,
+    calculate_credits_after_pending_cancel,
+    cancel_pending_enrollments,
+    can_cancel_enrollment,
+)
 
 
-def create_user_and_student(username="student01"):
-    user = User(username=username, password_hash="x", role=UserRole.STUDENT, is_active_account=True)
+def create_user_and_student(username="student01", major=None):
+    user = User()
+    user.username = username
+    user.password_hash = "x"
+    user.role = UserRole.STUDENT
+    user.is_active_account = True
     db.session.add(user)
     db.session.flush()
 
-    student = Student(user_id=user.id, student_code=f"SC-{username}", full_name="Test Student")
+    student = Student(
+        user_id=user.id,
+        student_code=f"SC-{username}",
+        full_name="Test Student",
+        major=major,
+    )
     db.session.add(student)
     db.session.commit()
 
@@ -35,10 +50,11 @@ def create_semester(start_offset=0, reg_start_offset=-10, reg_end_offset=10):
     today = date.today()
     semester = Semester(
         name="TS",
+        academic_year="2026",
         start_date=today + timedelta(days=start_offset),
+        end_date=today + timedelta(days=start_offset + 100),
         registration_start_date=today + timedelta(days=reg_start_offset),
         registration_end_date=today + timedelta(days=reg_end_offset),
-        cancel_deadline=today + timedelta(days=reg_end_offset + 30),
         is_active=True,
     )
     db.session.add(semester)
@@ -126,8 +142,8 @@ def test_enroll_expired_registration(app):
         assert error == "Đã hết hạn đăng ký học phần"
 
 
-def test_enroll_before_registration_start_allowed(app):
-    # current implementation does not block before registration_start_date
+def test_enroll_before_registration_start_blocked(app):
+    # registration must be blocked before registration_start_date
     with app.app_context():
         user, student = create_user_and_student()
         # registration starts in future
@@ -136,9 +152,48 @@ def test_enroll_before_registration_start_allowed(app):
 
         enrollment, error = register_course(student.id, course_class.id, current_date=date.today())
 
-        # expected: allowed by current logic
-        assert error is None
-        assert enrollment is not None
+        assert enrollment is None
+        assert error == "Chưa đến thời gian đăng ký học phần"
+
+
+def test_enroll_expired_major_window_blocks_even_when_semester_open(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="expired-major", major="Business Administration")
+        semester = create_semester(reg_start_offset=-10, reg_end_offset=10)
+        course, course_class = create_course_and_class(code="ENR10", semester=semester)
+
+        db.session.add(MajorRegistrationWindow(
+            semester_id=semester.id,
+            major="Business Administration",
+            registration_start_date=date.today() - timedelta(days=30),
+            registration_end_date=date.today() - timedelta(days=1),
+        ))
+        db.session.commit()
+
+        enrollment, error = register_course(student.id, course_class.id, current_date=date.today())
+
+        assert enrollment is None
+        assert error == "Đã hết hạn đăng ký học phần"
+
+
+def test_enroll_future_major_window_blocks_even_when_semester_open(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="future-major", major="Digital Design")
+        semester = create_semester(reg_start_offset=-10, reg_end_offset=10)
+        course, course_class = create_course_and_class(code="ENR11", semester=semester)
+
+        db.session.add(MajorRegistrationWindow(
+            semester_id=semester.id,
+            major="Digital Design",
+            registration_start_date=date.today() + timedelta(days=3),
+            registration_end_date=date.today() + timedelta(days=20),
+        ))
+        db.session.commit()
+
+        enrollment, error = register_course(student.id, course_class.id, current_date=date.today())
+
+        assert enrollment is None
+        assert error == "Chưa đến thời gian đăng ký học phần"
 
 
 def test_enroll_class_full(app):
@@ -167,7 +222,7 @@ def test_enroll_already_registered_same_class(app):
         assert error == "Sinh viên đã đăng ký lớp học phần này"
 
 
-def test_enroll_registered_same_course_different_class_allowed(app):
+def test_enroll_registered_same_course_different_class_blocked(app):
     with app.app_context():
         user, student = create_user_and_student()
         semester = create_semester()
@@ -184,9 +239,8 @@ def test_enroll_registered_same_course_different_class_allowed(app):
 
         enrollment, error = register_course(student.id, class2.id, current_date=date.today())
 
-        # current logic allows registering same course in different class
-        assert error is None
-        assert enrollment is not None
+        assert enrollment is None
+        assert error == "Sinh viên đã đăng ký môn học này ở lớp khác"
 
 
 def test_enroll_already_completed_course(app):
@@ -248,3 +302,295 @@ def test_enroll_increments_current_students(app):
         refreshed = db.session.get(CourseClass, course_class.id)
         assert refreshed.current_students == before + 1
 
+
+def test_validate_cancel_draft_success(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="cancel-ok")
+        semester = create_semester()
+        course, course_class = create_course_and_class(code="CXL01", semester=semester)
+        enrollment = add_enrollment(student, course_class, semester)
+
+        found, error = validate_cancel_draft(student.id, enrollment.id)
+
+        assert error is None
+        assert found is not None
+        assert found.id == enrollment.id
+
+
+def test_validate_cancel_draft_not_found(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="cancel-missing")
+
+        found, error = validate_cancel_draft(student.id, 9999)
+
+        assert found is None
+        assert error == "Không tìm thấy đăng ký học phần."
+
+
+def test_validate_cancel_draft_other_student(app):
+    with app.app_context():
+        user_a, student_a = create_user_and_student(username="cancel-a")
+        user_b, student_b = create_user_and_student(username="cancel-b")
+        semester = create_semester()
+        course, course_class = create_course_and_class(code="CXL02", semester=semester)
+        enrollment = add_enrollment(student_a, course_class, semester)
+
+        found, error = validate_cancel_draft(student_b.id, enrollment.id)
+
+        assert found is None
+        assert error == "Bạn không có quyền hủy đăng ký này."
+
+
+def test_validate_cancel_draft_already_cancelled(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="cancel-old")
+        semester = create_semester()
+        course, course_class = create_course_and_class(code="CXL03", semester=semester)
+        enrollment = add_enrollment(student, course_class, semester)
+        enrollment.status = EnrollmentStatus.CANCELLED
+        db.session.commit()
+
+        found, error = validate_cancel_draft(student.id, enrollment.id)
+
+        assert found is None
+        assert error == "Học phần này đã bị hủy trước đó."
+
+
+def test_cancel_allowed_on_fourteenth_day_from_semester_start(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="cancel-day14")
+        today = date.today()
+        semester = Semester(
+            name="DAY14",
+            academic_year="2026",
+            start_date=today - timedelta(days=14),
+            end_date=today + timedelta(days=100),
+            registration_start_date=today - timedelta(days=20),
+            registration_end_date=today + timedelta(days=10),
+            is_active=True,
+        )
+        db.session.add(semester)
+        db.session.commit()
+
+        course, course_class = create_course_and_class(code="CXL14", semester=semester)
+        enrollment = add_enrollment(student, course_class, semester)
+
+        ok, error = can_cancel_enrollment(student.id, enrollment.id, current_date=today)
+        cancelled_ids, messages = cancel_pending_enrollments(student.id, [enrollment.id], current_date=today)
+
+        assert ok is True
+        assert error is None
+        assert messages == []
+        assert cancelled_ids == [enrollment.id]
+
+
+def test_cancel_blocked_after_fourteenth_day_from_semester_start(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="cancel-day15")
+        today = date.today()
+        semester = Semester(
+            name="DAY15",
+            academic_year="2026",
+            start_date=today - timedelta(days=15),
+            end_date=today + timedelta(days=100),
+            registration_start_date=today - timedelta(days=20),
+            registration_end_date=today + timedelta(days=10),
+            is_active=True,
+        )
+        db.session.add(semester)
+        db.session.commit()
+
+        course, course_class = create_course_and_class(code="CXL15", semester=semester)
+        enrollment = add_enrollment(student, course_class, semester)
+
+        ok, error = can_cancel_enrollment(student.id, enrollment.id, current_date=today)
+        cancelled_ids, messages = cancel_pending_enrollments(student.id, [enrollment.id], current_date=today)
+
+        assert ok is False
+        assert error == "Đã quá hạn hủy đăng ký học phần."
+        assert cancelled_ids == []
+        assert messages == ["Đã quá hạn hủy đăng ký học phần."]
+
+
+def test_calculate_credits_after_pending_cancel_no_pending(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="credit-none")
+        semester = create_semester()
+        course_a, class_a = create_course_and_class(code="CRED01", credits=3, semester=semester)
+        course_b, class_b = create_course_and_class(code="CRED02", credits=4, semester=semester)
+        add_enrollment(student, class_a, semester)
+        add_enrollment(student, class_b, semester)
+
+        total = calculate_credits_after_pending_cancel(student.id, semester.id, [])
+
+        assert total == 7
+
+
+def test_calculate_credits_after_pending_cancel_one_pending(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="credit-one")
+        semester = create_semester()
+        course_a, class_a = create_course_and_class(code="CRED03", credits=3, semester=semester)
+        course_b, class_b = create_course_and_class(code="CRED04", credits=4, semester=semester)
+        en_a = add_enrollment(student, class_a, semester)
+        add_enrollment(student, class_b, semester)
+
+        total = calculate_credits_after_pending_cancel(student.id, semester.id, [en_a.id])
+
+        assert total == 4
+
+
+def test_calculate_credits_after_pending_cancel_many_pending_and_invalid_ids(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="credit-many")
+        semester = create_semester()
+        course_a, class_a = create_course_and_class(code="CRED05", credits=3, semester=semester)
+        course_b, class_b = create_course_and_class(code="CRED06", credits=4, semester=semester)
+        course_c, class_c = create_course_and_class(code="CRED07", credits=5, semester=semester)
+        en_a = add_enrollment(student, class_a, semester)
+        en_b = add_enrollment(student, class_b, semester)
+        add_enrollment(student, class_c, semester)
+
+        total = calculate_credits_after_pending_cancel(student.id, semester.id, [en_a.id, en_b.id, 9999, "bad-id"])
+
+        assert total == 5
+
+
+def test_cancel_pending_enrollments_success_and_current_students_not_negative(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="cancel-batch")
+        semester = create_semester()
+        course_a, class_a = create_course_and_class(code="CXL10A", credits=3, semester=semester, current_students=0)
+        course_b, class_b = create_course_and_class(code="CXL10B", credits=4, semester=semester, current_students=0)
+        en_a = add_enrollment(student, class_a, semester)
+        en_b = add_enrollment(student, class_b, semester)
+
+        cancelled_ids, messages = cancel_pending_enrollments(student.id, [en_a.id, en_b.id])
+
+        assert messages == []
+        assert set(cancelled_ids) == {en_a.id, en_b.id}
+
+        refreshed_a = db.session.get(Enrollment, en_a.id)
+        refreshed_b = db.session.get(Enrollment, en_b.id)
+        refreshed_class_a = db.session.get(CourseClass, class_a.id)
+        refreshed_class_b = db.session.get(CourseClass, class_b.id)
+
+        assert refreshed_a.status == EnrollmentStatus.CANCELLED
+        assert refreshed_b.status == EnrollmentStatus.CANCELLED
+        assert refreshed_class_a.current_students == 0
+        assert refreshed_class_b.current_students == 0
+
+
+def test_cancel_pending_enrollments_after_deadline_and_midterm_blocked(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="cancel-blocked")
+        today = date.today()
+        semester = Semester(
+            name="BLOCK",
+            academic_year="2026",
+            start_date=today,
+            end_date=today + timedelta(days=100),
+            registration_start_date=today - timedelta(days=10),
+            registration_end_date=today + timedelta(days=10),
+            is_active=True,
+        )
+        db.session.add(semester)
+        db.session.commit()
+
+        course_a, class_a = create_course_and_class(code="CXL11", credits=3, semester=semester, current_students=1)
+        enrollment = add_enrollment(student, class_a, semester)
+        enrollment.midterm_score = 8.0
+        db.session.commit()
+
+        cancelled_ids, messages = cancel_pending_enrollments(student.id, [enrollment.id])
+
+        assert cancelled_ids == []
+        assert "hủy" in messages[0].lower()
+
+        refreshed = db.session.get(Enrollment, enrollment.id)
+        refreshed_class = db.session.get(CourseClass, class_a.id)
+        assert refreshed.status == EnrollmentStatus.REGISTERED
+        assert refreshed_class.current_students == 2
+
+
+def test_cancel_pending_enrollments_midterm_blocked(app):
+    with app.app_context():
+        user, student = create_user_and_student(username="cancel-midterm")
+        semester = create_semester()
+        course_a, class_a = create_course_and_class(code="CXL12", credits=3, semester=semester, current_students=0)
+        enrollment = add_enrollment(student, class_a, semester)
+        enrollment.midterm_score = 7.5
+        db.session.commit()
+
+        cancelled_ids, messages = cancel_pending_enrollments(student.id, [enrollment.id])
+
+        assert cancelled_ids == []
+        assert any("giữa kỳ" in message.lower() for message in messages)
+
+        refreshed = db.session.get(Enrollment, enrollment.id)
+        refreshed_class = db.session.get(CourseClass, class_a.id)
+        assert refreshed.status == EnrollmentStatus.REGISTERED
+        assert refreshed_class.current_students == 1
+
+
+def test_re_register_after_cancel_reactivates_old_enrollment(app):
+    """Test that re-registering after cancellation reactivates the cancelled enrollment instead of creating a new one."""
+    with app.app_context():
+        from app.services.enrollment_service import cancel_pending_enrollments
+        
+        user, student = create_user_and_student(username="reregister-test")
+        semester = create_semester()
+        course, course_class = create_course_and_class(code="REREG01", semester=semester, current_students=0)
+
+        # Initial registration
+        enrollment_1, error_1 = register_course(student.id, course_class.id, current_date=date.today())
+        assert error_1 is None
+        assert enrollment_1 is not None
+        initial_id = enrollment_1.id
+        
+        # Verify current_students incremented
+        refreshed_class = db.session.get(CourseClass, course_class.id)
+        assert refreshed_class.current_students == 1
+
+        # Cancel the enrollment
+        cancelled_ids, cancel_messages = cancel_pending_enrollments(
+            student.id, 
+            [enrollment_1.id],
+            current_date=date.today()
+        )
+        assert cancelled_ids == [initial_id]
+        assert cancel_messages == []
+        
+        # Verify status changed to CANCELLED
+        cancelled_enrollment = db.session.get(Enrollment, initial_id)
+        assert cancelled_enrollment.status == EnrollmentStatus.CANCELLED
+        
+        # Verify current_students decremented
+        refreshed_class = db.session.get(CourseClass, course_class.id)
+        assert refreshed_class.current_students == 0
+
+        # Re-register for the same class
+        enrollment_2, error_2 = register_course(student.id, course_class.id, current_date=date.today())
+        assert error_2 is None
+        assert enrollment_2 is not None
+        
+        # Verify it's the SAME enrollment record (same ID)
+        assert enrollment_2.id == initial_id
+        
+        # Verify status changed back to REGISTERED
+        refreshed_enrollment = db.session.get(Enrollment, initial_id)
+        assert refreshed_enrollment.status == EnrollmentStatus.REGISTERED
+        assert refreshed_enrollment.registered_at is not None
+        assert refreshed_enrollment.cancelled_at is None
+        
+        # Verify current_students incremented again
+        refreshed_class = db.session.get(CourseClass, course_class.id)
+        assert refreshed_class.current_students == 1
+        
+        # Verify only 1 enrollment record exists for this student-class pair
+        all_enrollments = Enrollment.query.filter_by(
+            student_id=student.id,
+            course_class_id=course_class.id
+        ).all()
+        assert len(all_enrollments) == 1
+        assert all_enrollments[0].id == initial_id

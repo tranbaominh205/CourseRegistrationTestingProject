@@ -1,85 +1,98 @@
 // class_list.js
-// Client-side handling for temporary cancellation of enrollments.
-// Clicking the X removes the row on the client and stores the enrollment id
-// in a transient list. Only when the user clicks Confirm (and the form is
-// submitted) the canceled ids are sent to the server to be persisted.
+// Lightweight client-side helpers for the class list page.
 
-document.addEventListener('DOMContentLoaded', function () {
-  var canceled = new Set();
+(function () {
+  'use strict';
 
-  function updateSummary(deltaCredits, deltaCount) {
-	var creditsEl = document.getElementById('total-credits');
-	var coursesEl = document.getElementById('total-courses');
+  var STORAGE_KEY = 'student_class_list_scroll_state';
 
-	if (creditsEl) {
-	  // total-credits has format like "12 / 25"
-	  var parts = creditsEl.textContent.split('/');
-	  var current = parseInt(parts[0]) || 0;
-	  current = Math.max(0, current + (deltaCredits || 0));
-	  creditsEl.textContent = current + ' / 25';
-	}
-
-	if (coursesEl) {
-	  var c = parseInt(coursesEl.textContent) || 0;
-	  c = Math.max(0, c + (deltaCount || 0));
-	  coursesEl.textContent = c;
-	}
+  function getTableContainers() {
+    return Array.prototype.slice.call(document.querySelectorAll('.table-container'));
   }
 
-  function ensureEmptyMessage() {
-	var tbody = document.querySelector('#registered-courses tbody');
-	if (!tbody) return;
-	// count tr elements that are not the "empty" message
-	var rows = tbody.querySelectorAll('tr');
-	if (rows.length === 0) {
-	  var tr = document.createElement('tr');
-	  var td = document.createElement('td');
-	  td.setAttribute('colspan', '6');
-	  td.style.textAlign = 'center';
-	  td.style.padding = '20px';
-	  td.textContent = 'Sinh viên chưa đăng ký môn học nào.';
-	  tr.appendChild(td);
-	  tbody.appendChild(tr);
-	}
+  function saveScrollState() {
+    try {
+      var containers = getTableContainers();
+      var state = {
+        windowX: window.scrollX || window.pageXOffset || 0,
+        windowY: window.scrollY || window.pageYOffset || 0,
+        containers: containers.map(function (container, index) {
+          return {
+            index: index,
+            scrollTop: container.scrollTop || 0,
+            scrollLeft: container.scrollLeft || 0
+          };
+        })
+      };
+
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      // Ignore storage errors (private mode, disabled storage, etc.)
+    }
   }
 
-  // Attach cancel handlers
-  document.querySelectorAll('.btn-cancel').forEach(function (btn) {
-	btn.addEventListener('click', function (e) {
-	  var id = btn.getAttribute('data-enrollment-id');
-	  if (!id) return;
+  function restoreScrollState() {
+    try {
+      var raw = sessionStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        return;
+      }
 
-	  var tr = btn.closest('tr');
-	  var credit = 0;
-	  if (tr && tr.dataset && tr.dataset.credit) {
-		credit = parseInt(tr.dataset.credit) || 0;
-	  }
+      var state = JSON.parse(raw);
+      var containers = getTableContainers();
 
-	  // Add to canceled set
-	  canceled.add(id);
+      if (state && typeof state.windowY === 'number') {
+        window.scrollTo(state.windowX || 0, state.windowY || 0);
+      }
 
-	  // Remove row from DOM
-	  if (tr) tr.remove();
+      if (state && Array.isArray(state.containers)) {
+        state.containers.forEach(function (saved) {
+          var container = containers[saved.index];
+          if (!container) {
+            return;
+          }
 
-	  // Update summary
-	  updateSummary(-credit, -1);
+          container.scrollTop = saved.scrollTop || 0;
+          container.scrollLeft = saved.scrollLeft || 0;
+        });
+      }
 
-	  ensureEmptyMessage();
-	});
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      // Ignore malformed storage data and fall back to normal page behavior.
+    }
+  }
+
+  function isStudentActionForm(form) {
+    if (!form || typeof form.matches !== 'function') {
+      return false;
+    }
+
+    return form.matches('form[action*="/student/classes/"]') ||
+      form.matches('form[action*="/student/enrollments/"]') ||
+      form.id === 'confirm-form';
+  }
+
+  document.addEventListener('submit', function (event) {
+    if (isStudentActionForm(event.target)) {
+      saveScrollState();
+    }
+  }, true);
+
+  window.addEventListener('beforeunload', saveScrollState);
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+
+    restoreScrollState();
   });
 
-  // Before submitting the confirm form, append hidden inputs for canceled ids
-  var confirmForm = document.getElementById('confirm-form');
-  if (confirmForm) {
-	confirmForm.addEventListener('submit', function (ev) {
-	  // Append one hidden input per canceled id
-	  canceled.forEach(function (id) {
-		var inp = document.createElement('input');
-		inp.type = 'hidden';
-		inp.name = 'canceled_ids';
-		inp.value = id;
-		confirmForm.appendChild(inp);
-	  });
-	});
-  }
-});
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+      restoreScrollState();
+    }
+  });
+})();
+

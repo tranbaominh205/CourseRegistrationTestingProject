@@ -228,6 +228,26 @@ tr:hover td {
   padding-left: 15px;
 }
 
+/* Utility to truncate long text inside table cells */
+.truncate {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Buttons used inside table action cells: keep text on one line and slightly smaller */
+.table-action-btn {
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  min-width: 70px;
+  max-width: 95px;
+  display: inline-block;
+}
+
 /* Filter inputs */
 .filter-row th {
   padding: 6px;
@@ -374,6 +394,35 @@ tr:hover td {
 
 .action-footer .btn-logout {
   flex: 0 0 auto;
+}
+
+/* Constrain cancel column width */
+#registered-courses td:last-child {
+  width: 100px;
+  max-width: 100px;
+  overflow: hidden;
+}
+
+/* Cancel status wrapper - ensure vertical stacking */
+.cancel-status-pending {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+}
+
+/* Ensure form and button stack vertically */
+.cancel-status-pending form {
+  width: 100% !important;
+  display: block !important;
+  margin: 0 !important;
+}
+
+.cancel-status-pending .btn {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 auto !important;
 }
 
 /* Responsive */
