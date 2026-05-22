@@ -55,11 +55,7 @@ CourseRegistrationTestingProject/
 │   ├── extensions.py          # Khởi tạo db, login_manager
 │   ├── models.py              # Định nghĩa database models
 │   └── utils.py               # Hàm tiện ích, phân quyền
-│
-├── docs/
-│   ├── bug_report_template.md # Mẫu báo cáo lỗi
-│   └── test_plan.md           # Tài liệu kế hoạch kiểm thử
-│
+││
 ├── tests/
 │   ├── integration/           # Integration test cho route
 │   ├── selenium/              # Selenium smoke test
@@ -306,7 +302,7 @@ Kiểm thử route và luồng xử lý giữa nhiều thành phần, ví dụ:
 - Truy cập trang admin.
 - Tạo, sửa, xóa lớp học phần qua route.
 
-### Selenium smoke test
+### Selenium test
 
 Kiểm thử nhanh giao diện trên trình duyệt thật, ví dụ:
 
@@ -315,23 +311,6 @@ Kiểm thử nhanh giao diện trên trình duyệt thật, ví dụ:
 - Truy cập các trang chính.
 - Kiểm tra giao diện cơ bản không bị lỗi nghiêm trọng.
 
-## Một số testcase nghiệp vụ tiêu biểu
-
-| Mã testcase | Chức năng | Mục tiêu |
-|---|---|---|
-| LOGIN_01 | Đăng nhập | Đăng nhập thành công với tài khoản hợp lệ |
-| LOGIN_02 | Đăng nhập | Không cho đăng nhập khi sai mật khẩu |
-| LOGIN_03 | Đăng nhập | Không cho đăng nhập tài khoản bị khóa |
-| ENROLL_01 | Đăng ký học phần | Đăng ký lớp học phần thành công |
-| ENROLL_02 | Đăng ký học phần | Không cho đăng ký lớp đã đủ số lượng |
-| ENROLL_03 | Đăng ký học phần | Không cho đăng ký nếu trùng lịch |
-| ENROLL_04 | Đăng ký học phần | Không cho đăng ký nếu thiếu môn tiên quyết |
-| ENROLL_05 | Đăng ký học phần | Không cho đăng ký vượt quá 25 tín chỉ |
-| CANCEL_01 | Hủy học phần | Hủy học phần thành công khi còn hạn |
-| CANCEL_02 | Hủy học phần | Không cho hủy nếu đã có điểm giữa kỳ |
-| ADMIN_01 | Quản lý lớp | Admin tạo lớp học phần thành công |
-| ADMIN_02 | Quản lý lớp | Không cho tạo lớp có số lượng tối đa trên 50 |
-| ADMIN_03 | Quản lý lớp | Không cho xóa lớp đã có sinh viên đăng ký |
 
 ## CI/CD
 
@@ -341,35 +320,6 @@ Dự án có cấu hình GitHub Actions để tự động:
 - Cài đặt dependencies từ `requirements.txt`.
 - Chạy `pytest` khi push hoặc tạo pull request vào các nhánh chính.
 
-## Quy ước commit đề xuất
-
-Một số prefix commit nên dùng:
-
-```text
-feat: thêm chức năng mới
-fix: sửa lỗi
-test: thêm hoặc sửa test
-docs: cập nhật tài liệu
-refactor: cải thiện code nhưng không đổi hành vi
-style: sửa giao diện hoặc format code
-chore: thay đổi cấu hình, dọn dẹp project
-```
-
-Ví dụ:
-
-```bash
-git commit -m "docs: update project readme"
-git commit -m "test: add admin course class test cases"
-git commit -m "fix: prevent duplicate enrollment after cancellation"
-```
-
-## Ghi chú bảo mật
-
-- Không commit file `.env` lên GitHub.
-- Không hiển thị `password_hash`, session id hoặc thông tin database nhạy cảm trên giao diện.
-- Password trong database phải được lưu dưới dạng hash.
-- Các route cần đăng nhập phải sử dụng `login_required`.
-- Các route phân quyền phải kiểm tra đúng vai trò người dùng.
 
 ## Trạng thái dự án
 
@@ -386,13 +336,7 @@ Dự án hiện đã có các thành phần chính:
 - GitHub Actions CI.
 - File cấu hình môi trường mẫu.
 
-Một số tài liệu trong thư mục `docs/` có thể tiếp tục được bổ sung thêm, ví dụ:
 
-- Test plan chi tiết.
-- Testcase dạng bảng.
-- Bug report.
-- Test summary report.
-- Evidence ảnh chụp màn hình khi test thủ công.
 
 ## Tác giả
 
