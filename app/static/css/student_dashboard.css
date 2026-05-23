@@ -34,7 +34,7 @@ body {
   padding: 0 1.5rem;
 }
 
-/* Header */
+
 .header {
   background-color: var(--primary-color);
   color: white;
@@ -65,13 +65,13 @@ body {
   opacity: 0.8;
 }
 
-/* Main content */
+
 .main-content {
   margin-top: -2rem;
   padding-bottom: 5rem;
 }
 
-/* Section headers */
+
 .section-header {
   display: flex;
   align-items: center;
@@ -91,7 +91,7 @@ body {
   font-weight: 700;
 }
 
-/* Profile cards */
+
 .profile-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -159,7 +159,7 @@ body {
   border-radius: 50%;
 }
 
-/* Functions section */
+
 .functions-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -248,7 +248,7 @@ body {
   font-weight: 600;
 }
 
-/* Logout card */
+
 .logout-card {
   background-color: var(--error-container);
   border: 1px solid #ffc9c9;
@@ -309,7 +309,7 @@ body {
   background-color: #a01616;
 }
 
-/* Success Modal */
+
 .modal-overlay {
   position: fixed;
   inset: 0;

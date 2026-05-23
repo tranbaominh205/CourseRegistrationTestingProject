@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
+        
         <header class="main-header">
             <div class="icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -24,7 +24,7 @@
 
 
         <main>
-            <!-- Available Courses -->
+            
             <section class="section-card">
                 <div class="section-header">
                     <h2>Danh sách lớp học phần</h2>
@@ -75,7 +75,7 @@
                 </div>
             </section>
 
-            <!-- Registered Courses -->
+            
             <section class="section-card">
                 <div class="section-header">
                     <h2>Danh sách môn học đã đăng ký</h2>
@@ -146,7 +146,7 @@
                 </div>
             </section>
 
-            <!-- Summary -->
+            
             <section class="summary-box">
                 <h3 class="summary-title">Tổng kết đăng ký học kỳ</h3>
                 <div class="summary-grid">
@@ -165,7 +165,7 @@
                 </div>
             </section>
 
-            <!-- Confirmation Message -->
+            
             {% if can_confirm %}
                 <div class="confirmation-message" style="color: green; text-align: center; padding: 10px; margin: 10px 0; background: #d4edda; border-radius: 4px;">
                     {{ confirm_message }}
@@ -176,7 +176,7 @@
                 </div>
             {% endif %}
 
-            <!-- Action Buttons -->
+            
             <div class="action-footer">
                 {# Compute how many credits are missing (client display only) #}
                 {% set missing = min_credits - total_credits if total_credits is not none else min_credits %}
@@ -199,10 +199,10 @@
         </main>
     </div>
 
-    <!-- Toast Notification Container -->
+    
     <div id="toast-container"></div>
 
-    <!-- Flash Messages as Toast Notifications -->
+    
     <script>
       (function() {
         'use strict';

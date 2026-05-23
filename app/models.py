@@ -3,7 +3,6 @@ from zoneinfo import ZoneInfo
 from flask_login import UserMixin
 from app.extensions import db, login_manager
 
-# Vietnam timezone
 VIETNAM_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
@@ -226,12 +225,9 @@ class Enrollment(db.Model):
     )
     cancelled_at = db.Column(db.DateTime, nullable=True)
     
-    # New fields to store midterm and final scores. Use midterm_score to
-    # determine whether a midterm has been graded (midterm_score is not None).
     midterm_score = db.Column(db.Float, nullable=True)
     final_score = db.Column(db.Float, nullable=True)
 
-    # legacy flag left for backward compatibility; logic should prefer midterm_score
     midterm_exam_done = db.Column(db.Boolean, nullable=False, default=False)
 
     student = db.relationship("Student", back_populates="enrollments")

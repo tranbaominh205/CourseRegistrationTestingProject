@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+
+    - name: Install system deps (Ubuntu)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libssl-dev libffi-dev python3-dev wget gnupg2 ca-certificates
+        # Install Google Chrome for Selenium tests
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: "${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}"
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Upgrade pip and wheel
+      run: python -m pip install --upgrade pip setuptools wheel
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run non-Selenium tests (save output)
+      run: |
+        # Run only unit/integration/performance tests to avoid unstable Selenium runs on default CI
+        python -m pytest tests/unit tests/integration tests/performance -q | tee pytest-output.txt
+
+    - name: Upload pytest output
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: pytest-output
+        path: pytest-output.txt
+
+  selenium:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    services:
+      selenium:
+        image: selenium/standalone-chrome:latest
+        options: >-
+          --health-cmd="curl -f http://localhost:4444 || exit 1"
+          --health-interval=5s
+          --health-timeout=2s
+          --health-retries=12
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+
+    - name: Install system deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libssl-dev libffi-dev python3-dev
+
+    - name: Upgrade pip and wheel
+      run: python -m pip install --upgrade pip setuptools wheel
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run Selenium tests (remote webdriver)
+      env:
+        SELENIUM_REMOTE_URL: "http://localhost:4444"
+        SELENIUM_BASE_URL: ${{ env.SELENIUM_BASE_URL }}
+      run: |
+        python -m pytest tests/Selenium -q | tee selenium-pytest-output.txt
+
+    - name: Upload selenium pytest output
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: selenium-pytest-output
+        path: selenium-pytest-output.txt
+

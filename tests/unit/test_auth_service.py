@@ -27,8 +27,8 @@ def create_test_user(
 @pytest.mark.parametrize(
     "username, password, role",
     [
-        ("student01", "123456", UserRole.STUDENT),  # LOGIN_TC01
-        ("admin01", "123456", UserRole.ADMIN),      # LOGIN_TC02
+        ("student01", "123456", UserRole.STUDENT),
+        ("admin01", "123456", UserRole.ADMIN),
     ]
 )
 def test_authenticate_user_success(app, username, password, role):
@@ -106,7 +106,6 @@ def test_authenticate_user_failed_cases(
 
 
 def test_authenticate_user_inactive_account(app):
-    # LOGIN_TC08
     with app.app_context():
         create_test_user(
             username="locked01",
@@ -124,8 +123,8 @@ def test_authenticate_user_inactive_account(app):
 @pytest.mark.parametrize(
     "url",
     [
-        "/student/dashboard",  # LOGIN_TC10
-        "/admin/classes",      # LOGIN_TC11
+        "/student/dashboard",
+        "/admin/classes",
     ]
 )
 def test_dashboard_requires_login(client, url):
@@ -138,7 +137,6 @@ def test_dashboard_requires_login(client, url):
 
 
 def test_login_form_display(client):
-    # LOGIN_TC12
     response = client.get("/login")
 
     assert response.status_code == 200

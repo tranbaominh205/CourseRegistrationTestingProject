@@ -11,7 +11,6 @@ from app.repositories.course_class_repository import (
     get_prerequisites,
 )
 
-# Vietnam timezone
 VIETNAM_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
@@ -94,7 +93,6 @@ def get_registration_window_dates(student, semester):
         if major_window is not None:
             return major_window.registration_start_date, major_window.registration_end_date
 
-    # Fallback to semester-level window to keep backward compatibility.
     return semester.registration_start_date, semester.registration_end_date
 
 
@@ -139,7 +137,6 @@ def cancel_enrollment(student_id, enrollment_id, current_date=None):
     enrollment, error = validate_cancel_draft(student_id, enrollment_id)
     if error is not None:
         return None, error
-    # reuse shared checks
     rule_error = _validate_cancel_rules(enrollment, current_date=current_date)
     if rule_error is not None:
         return None, rule_error
@@ -156,7 +153,6 @@ def cancel_enrollment(student_id, enrollment_id, current_date=None):
 
 
 def _validate_cancel_rules(enrollment, current_date=None):
-    """Return error message string if cancellation not allowed, otherwise None."""
     if current_date is None:
         current_date = date.today()
 
@@ -179,10 +175,7 @@ def _validate_cancel_rules(enrollment, current_date=None):
 
 
 def can_cancel_enrollment(student_id, enrollment_id, current_date=None):
-    """Check whether an enrollment can be cancelled (for UI pre-validation).
-    Returns (True, None) if ok; otherwise (False, error_message).
-    Does NOT change DB state.
-    """
+
     if current_date is None:
         current_date = date.today()
 
@@ -237,7 +230,6 @@ def register_course(student_id, course_class_id, current_date=None):
     if course_class.current_students >= course_class.max_students:
         return None, "Lớp học phần đã đủ số lượng"
 
-    # Check if already registered for this class (REGISTERED status only)
     existed_enrollment = Enrollment.query.filter_by(
         student_id=student_id,
         course_class_id=course_class_id,
@@ -247,7 +239,6 @@ def register_course(student_id, course_class_id, current_date=None):
     if existed_enrollment is not None:
         return None, "Sinh viên đã đăng ký lớp học phần này"
 
-    # Check if there's a cancelled enrollment - if so, reactivate it instead of creating new
     cancelled_enrollment = Enrollment.query.filter_by(
         student_id=student_id,
         course_class_id=course_class_id,
@@ -255,7 +246,6 @@ def register_course(student_id, course_class_id, current_date=None):
     ).first()
 
     if cancelled_enrollment is not None:
-        # Reactivate the cancelled enrollment
         cancelled_enrollment.status = EnrollmentStatus.REGISTERED
         cancelled_enrollment.registered_at = datetime.now(VIETNAM_TZ)
         cancelled_enrollment.cancelled_at = None
@@ -278,13 +268,10 @@ def register_course(student_id, course_class_id, current_date=None):
     if has_completed_course(student_id, course_class.course_id):
         return None, "Sinh viên đã học môn này rồi"
 
-    # Check prerequisites
     prerequisites = get_prerequisites(course_class.course_id)
     missing = []
     for p in prerequisites:
-        # p.prerequisite_course_id available; use has_completed_course to check
         if not has_completed_course(student_id, p.prerequisite_course_id):
-            # try to get course name/code from relationship if available
             try:
                 name = p.prerequisite_course.name
                 code = p.prerequisite_course.code

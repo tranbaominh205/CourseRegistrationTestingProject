@@ -97,7 +97,6 @@ def add_completed_course(student, course, semester, status=CompletedCourseStatus
 def add_enrollment(student, course_class, semester):
     en = Enrollment(student_id=student.id, course_class_id=course_class.id, semester_id=semester.id, status=EnrollmentStatus.REGISTERED)
     db.session.add(en)
-    # increment current_students
     try:
         course_class.current_students = (course_class.current_students or 0) + 1
     except Exception:
@@ -132,7 +131,6 @@ def test_enroll_class_not_found(app):
 def test_enroll_expired_registration(app):
     with app.app_context():
         user, student = create_user_and_student()
-        # semester with registration end in the past
         semester = create_semester(reg_start_offset=-30, reg_end_offset=-1)
         course, course_class = create_course_and_class(code="ENR02", semester=semester)
 
@@ -143,10 +141,8 @@ def test_enroll_expired_registration(app):
 
 
 def test_enroll_before_registration_start_blocked(app):
-    # registration must be blocked before registration_start_date
     with app.app_context():
         user, student = create_user_and_student()
-        # registration starts in future
         semester = create_semester(reg_start_offset=5, reg_end_offset=30)
         course, course_class = create_course_and_class(code="ENR03", semester=semester)
 
@@ -262,12 +258,9 @@ def test_enroll_schedule_conflict(app):
         user, student = create_user_and_student()
         semester = create_semester()
 
-        # create existing class with schedule day 2, periods 1-3
         course_a, class_a = create_course_and_class(code="ENR08A", semester=semester)
-        # create target class overlapping day 2, periods 3-5 (overlap at period 3)
         course_b, class_b = create_course_and_class(code="ENR08B", semester=semester)
 
-        # create a dummy room for schedules
         from app.models import Room
         room = Room(code="R1", capacity=50)
         db.session.add(room)
@@ -278,7 +271,6 @@ def test_enroll_schedule_conflict(app):
         db.session.add_all([sched_a, sched_b])
         db.session.commit()
 
-        # enroll student into class_a
         add_enrollment(student, class_a, semester)
 
         enrollment, error = register_course(student.id, class_b.id, current_date=date.today())
@@ -534,7 +526,6 @@ def test_cancel_pending_enrollments_midterm_blocked(app):
 
 
 def test_re_register_after_cancel_reactivates_old_enrollment(app):
-    """Test that re-registering after cancellation reactivates the cancelled enrollment instead of creating a new one."""
     with app.app_context():
         from app.services.enrollment_service import cancel_pending_enrollments
         
@@ -542,17 +533,14 @@ def test_re_register_after_cancel_reactivates_old_enrollment(app):
         semester = create_semester()
         course, course_class = create_course_and_class(code="REREG01", semester=semester, current_students=0)
 
-        # Initial registration
         enrollment_1, error_1 = register_course(student.id, course_class.id, current_date=date.today())
         assert error_1 is None
         assert enrollment_1 is not None
         initial_id = enrollment_1.id
         
-        # Verify current_students incremented
         refreshed_class = db.session.get(CourseClass, course_class.id)
         assert refreshed_class.current_students == 1
 
-        # Cancel the enrollment
         cancelled_ids, cancel_messages = cancel_pending_enrollments(
             student.id, 
             [enrollment_1.id],
@@ -561,33 +549,26 @@ def test_re_register_after_cancel_reactivates_old_enrollment(app):
         assert cancelled_ids == [initial_id]
         assert cancel_messages == []
         
-        # Verify status changed to CANCELLED
         cancelled_enrollment = db.session.get(Enrollment, initial_id)
         assert cancelled_enrollment.status == EnrollmentStatus.CANCELLED
         
-        # Verify current_students decremented
         refreshed_class = db.session.get(CourseClass, course_class.id)
         assert refreshed_class.current_students == 0
 
-        # Re-register for the same class
         enrollment_2, error_2 = register_course(student.id, course_class.id, current_date=date.today())
         assert error_2 is None
         assert enrollment_2 is not None
         
-        # Verify it's the SAME enrollment record (same ID)
         assert enrollment_2.id == initial_id
         
-        # Verify status changed back to REGISTERED
         refreshed_enrollment = db.session.get(Enrollment, initial_id)
         assert refreshed_enrollment.status == EnrollmentStatus.REGISTERED
         assert refreshed_enrollment.registered_at is not None
         assert refreshed_enrollment.cancelled_at is None
         
-        # Verify current_students incremented again
         refreshed_class = db.session.get(CourseClass, course_class.id)
         assert refreshed_class.current_students == 1
         
-        # Verify only 1 enrollment record exists for this student-class pair
         all_enrollments = Enrollment.query.filter_by(
             student_id=student.id,
             course_class_id=course_class.id
