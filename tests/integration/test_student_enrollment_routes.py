@@ -89,7 +89,7 @@ def test_route_guest_redirects_to_login(client):
 def test_route_admin_forbidden(app, client):
     with app.app_context():
         admin = create_user("adminx", role=UserRole.ADMIN)
-        create_student_for_user(admin, code="ADMINST")  # not used but safe
+        create_student_for_user(admin, code="ADMINST")
 
     login(client, "adminx")
 
@@ -118,7 +118,6 @@ def test_class_list_title_shows_active_semester(app, client):
     response = client.get("/student/classes")
     assert response.status_code == 200
     text = response.get_data(as_text=True)
-    # Expect the page title/header to include "Đăng ký học phần"
     assert "Đăng ký học phần" in text
 
 
@@ -179,7 +178,6 @@ def test_route_student_post_register_full_class(app, client):
     assert response.status_code == 302
     assert "/student/classes" in response.location
 
-    # ensure no enrollment created for this student
     with app.app_context():
         en = Enrollment.query.filter_by(student_id=student_id, course_class_id=course_class_id).first()
         assert en is None
@@ -191,23 +189,19 @@ def test_route_student_post_register_conflict(app, client):
         student = create_student_for_user(user, code="SCF")
         semester = create_semester()
 
-        # create room
         room = Room(code="RR1", capacity=50)
         db.session.add(room)
         db.session.commit()
 
-        # class A
         course_a, class_a = create_course_and_class(code="CF-A", semester=semester)
         sched_a = ClassSchedule(course_class_id=class_a.id, room_id=room.id, day_of_week=3, start_period=1, end_period=3)
         db.session.add(sched_a)
 
-        # class B overlapping
         course_b, class_b = create_course_and_class(code="CF-B", semester=semester)
         sched_b = ClassSchedule(course_class_id=class_b.id, room_id=room.id, day_of_week=3, start_period=3, end_period=5)
         db.session.add(sched_b)
         db.session.commit()
 
-        # enroll student in class_a
         en = Enrollment(student_id=student.id, course_class_id=class_a.id, semester_id=semester.id, status=EnrollmentStatus.REGISTERED)
         db.session.add(en)
         class_a.current_students = (class_a.current_students or 0) + 1
@@ -452,7 +446,6 @@ def test_route_student_confirm_registration_overdue_cancel_shows_error_and_keeps
         user = create_user("student-confirm-overdue")
         student = create_student_for_user(user, code="SCOF")
         today = date.today()
-        # Make start_date sufficiently in the past so start_date + 14 days < today
         semester = Semester(
             name="S2",
             academic_year="2026",

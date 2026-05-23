@@ -22,7 +22,6 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
 
-    # Prevent browser caching of authenticated pages so 'back' won't show protected content after logout
     @app.after_request
     def add_no_cache_headers(response):
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, private, max-age=0'

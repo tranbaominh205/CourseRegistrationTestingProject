@@ -20,7 +20,6 @@ from app.services.admin_service import (
     AdminServiceError,
     create_course_class,
     delete_course_class,
-    update_course_class,
 )
 
 
@@ -182,11 +181,9 @@ def test_admin_delete_course_class_with_enrollment_fail(app):
 
 
 def test_admin_create_course_class_duplicate_code_fail(app):
-    """Test case 3: Không cho tạo mã lớp trùng"""
     with app.app_context():
         course, semester, room = create_base_data()
 
-        # Create first class with code IT001-01
         create_course_class({
             "course_id": course.id,
             "semester_id": semester.id,
@@ -199,7 +196,6 @@ def test_admin_create_course_class_duplicate_code_fail(app):
             "end_period": 3,
         })
 
-        # Try to create another class with the same code
         with pytest.raises(AdminServiceError, match="đã tồn tại"):
             create_course_class({
                 "course_id": course.id,
@@ -215,11 +211,9 @@ def test_admin_create_course_class_duplicate_code_fail(app):
 
 
 def test_admin_create_course_class_same_room_different_time_success(app):
-    """Test case 5: Cho tạo cùng phòng nhưng khác tiết"""
     with app.app_context():
         course, semester, room = create_base_data()
 
-        # Create first class in room A101 on Monday (day 2), periods 1-3
         course_class_1 = create_course_class({
             "course_id": course.id,
             "semester_id": semester.id,
@@ -232,7 +226,6 @@ def test_admin_create_course_class_same_room_different_time_success(app):
             "end_period": 3,
         })
 
-        # Create second class in same room A101 but different times (periods 4-6)
         course_class_2 = create_course_class({
             "course_id": course.id,
             "semester_id": semester.id,
@@ -252,7 +245,6 @@ def test_admin_create_course_class_same_room_different_time_success(app):
 
 
 def test_admin_create_course_class_same_time_different_room_success(app):
-    """Test case 6: Cho tạo cùng tiết nhưng khác phòng"""
     with app.app_context():
         course = Course(code="IT001", name="Nhập môn lập trình", credits=3)
         semester = Semester(
@@ -270,7 +262,6 @@ def test_admin_create_course_class_same_time_different_room_success(app):
         db.session.add_all([course, semester, room_a, room_b])
         db.session.commit()
 
-        # Create first class in room A101 on Monday (day 2), periods 1-3
         course_class_1 = create_course_class({
             "course_id": course.id,
             "semester_id": semester.id,
@@ -283,7 +274,6 @@ def test_admin_create_course_class_same_time_different_room_success(app):
             "end_period": 3,
         })
 
-        # Create second class in different room B202 but same time (periods 1-3)
         course_class_2 = create_course_class({
             "course_id": course.id,
             "semester_id": semester.id,
@@ -303,7 +293,6 @@ def test_admin_create_course_class_same_time_different_room_success(app):
 
 
 def test_admin_create_course_class_empty_class_code_fail(app):
-    """Test that empty class code raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -322,7 +311,6 @@ def test_admin_create_course_class_empty_class_code_fail(app):
 
 
 def test_admin_create_course_class_whitespace_class_code_fail(app):
-    """Test that whitespace-only class code raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -341,7 +329,6 @@ def test_admin_create_course_class_whitespace_class_code_fail(app):
 
 
 def test_admin_create_course_class_invalid_status_fail(app):
-    """Test that invalid status raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -360,7 +347,6 @@ def test_admin_create_course_class_invalid_status_fail(app):
 
 
 def test_admin_create_course_class_invalid_day_of_week_fail(app):
-    """Test that invalid day_of_week (< 2) raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -379,7 +365,6 @@ def test_admin_create_course_class_invalid_day_of_week_fail(app):
 
 
 def test_admin_create_course_class_invalid_day_of_week_over_8_fail(app):
-    """Test that invalid day_of_week (> 8) raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -398,7 +383,6 @@ def test_admin_create_course_class_invalid_day_of_week_over_8_fail(app):
 
 
 def test_admin_create_course_class_invalid_start_period_fail(app):
-    """Test that invalid start_period (< 1) raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -417,7 +401,6 @@ def test_admin_create_course_class_invalid_start_period_fail(app):
 
 
 def test_admin_create_course_class_invalid_end_period_over_15_fail(app):
-    """Test that invalid end_period (> 15) raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -436,7 +419,6 @@ def test_admin_create_course_class_invalid_end_period_over_15_fail(app):
 
 
 def test_admin_create_course_class_start_period_greater_than_end_period_fail(app):
-    """Test that start_period > end_period raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -455,7 +437,6 @@ def test_admin_create_course_class_start_period_greater_than_end_period_fail(app
 
 
 def test_admin_create_course_class_nonexistent_course_fail(app):
-    """Test that non-existent course raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -474,7 +455,6 @@ def test_admin_create_course_class_nonexistent_course_fail(app):
 
 
 def test_admin_create_course_class_nonexistent_semester_fail(app):
-    """Test that non-existent semester raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -493,7 +473,6 @@ def test_admin_create_course_class_nonexistent_semester_fail(app):
 
 
 def test_admin_create_course_class_nonexistent_room_fail(app):
-    """Test that non-existent room raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -512,11 +491,9 @@ def test_admin_create_course_class_nonexistent_room_fail(app):
 
 
 def test_admin_create_course_class_max_students_exceeds_room_capacity_fail(app):
-    """Test that max_students > room.capacity raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
-        # Create room with smaller capacity
         small_room = Room(code="C301", capacity=30)
         db.session.add(small_room)
         db.session.commit()
@@ -536,7 +513,6 @@ def test_admin_create_course_class_max_students_exceeds_room_capacity_fail(app):
 
 
 def test_admin_create_course_class_invalid_max_students_zero_fail(app):
-    """Test that max_students < 1 raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -555,7 +531,6 @@ def test_admin_create_course_class_invalid_max_students_zero_fail(app):
 
 
 def test_admin_create_course_class_invalid_course_id_type_fail(app):
-    """Test that non-numeric course_id raises error"""
     with app.app_context():
         course, semester, room = create_base_data()
 
@@ -574,7 +549,6 @@ def test_admin_create_course_class_invalid_course_id_type_fail(app):
 
 
 def test_admin_delete_course_class_not_found_fail(app):
-    """Test that deleting non-existent course class raises error"""
     with app.app_context():
         from app.services.admin_service import delete_course_class
 
@@ -583,13 +557,11 @@ def test_admin_delete_course_class_not_found_fail(app):
 
 
 def test_admin_update_course_class_success(app):
-    """Test updating an existing course class successfully"""
     with app.app_context():
         from app.services.admin_service import update_course_class
 
         course, semester, room = create_base_data()
 
-        # Create initial course class
         course_class = create_course_class({
             "course_id": course.id,
             "semester_id": semester.id,
@@ -602,7 +574,6 @@ def test_admin_update_course_class_success(app):
             "end_period": 3,
         })
 
-        # Update the course class
         updated_class = update_course_class(course_class.id, {
             "course_id": course.id,
             "semester_id": semester.id,
@@ -621,7 +592,6 @@ def test_admin_update_course_class_success(app):
 
 
 def test_admin_update_course_class_not_found_fail(app):
-    """Test that updating non-existent course class raises error"""
     with app.app_context():
         from app.services.admin_service import update_course_class
 
@@ -642,13 +612,11 @@ def test_admin_update_course_class_not_found_fail(app):
 
 
 def test_admin_update_course_class_reduce_max_students_below_current_fail(app):
-    """Test that reducing max_students below current_students raises error"""
     with app.app_context():
         from app.services.admin_service import update_course_class
 
         course, semester, room = create_base_data()
 
-        # Create initial course class
         course_class = create_course_class({
             "course_id": course.id,
             "semester_id": semester.id,
@@ -661,17 +629,15 @@ def test_admin_update_course_class_reduce_max_students_below_current_fail(app):
             "end_period": 3,
         })
 
-        # Simulate students enrolled
         course_class.current_students = 25
         db.session.commit()
 
-        # Try to reduce max_students below current
         with pytest.raises(AdminServiceError, match="Số sinh viên tối đa không được nhỏ hơn số sinh viên hiện tại"):
             update_course_class(course_class.id, {
                 "course_id": course.id,
                 "semester_id": semester.id,
                 "class_code": "IT001-01",
-                "max_students": 20,  # Less than current_students (25)
+                "max_students": 20,
                 "status": "OPEN",
                 "room_id": room.id,
                 "day_of_week": 2,

@@ -1,16 +1,11 @@
-/**
- * Login Page JavaScript
- * Handles password visibility toggle
- */
+
 
 document.addEventListener('DOMContentLoaded', function() {
     setupPasswordToggle();
     setupTopNavigation();
 });
 
-/**
- * Setup password visibility toggle
- */
+
 function setupPasswordToggle() {
     const toggleBtn = document.getElementById('togglePasswordBtn');
     const passwordInput = document.getElementById('password');
@@ -24,8 +19,6 @@ function setupPasswordToggle() {
 
         const isPassword = passwordInput.type === 'password';
         passwordInput.type = isPassword ? 'text' : 'password';
-
-        // Toggle icon visibility
         if (isPassword) {
             iconEye.style.display = 'none';
             iconEyeOff.style.display = 'block';
@@ -36,9 +29,7 @@ function setupPasswordToggle() {
     });
 }
 
-/**
- * Setup top navigation button actions
- */
+
 function setupTopNavigation() {
     const backToHomeBtn = document.getElementById('backToHomeBtn');
 

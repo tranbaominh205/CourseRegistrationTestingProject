@@ -1,5 +1,3 @@
-// class_list.js
-// Lightweight client-side helpers for the class list page.
 
 (function () {
   'use strict';
@@ -27,7 +25,6 @@
 
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (error) {
-      // Ignore storage errors (private mode, disabled storage, etc.)
     }
   }
 
@@ -59,7 +56,6 @@
 
       sessionStorage.removeItem(STORAGE_KEY);
     } catch (error) {
-      // Ignore malformed storage data and fall back to normal page behavior.
     }
   }
 

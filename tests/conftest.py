@@ -4,7 +4,6 @@ from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
 
-# Suppress ResourceWarnings from unclosed DB connections in tests
 warnings.filterwarnings("ignore", category=ResourceWarning)
 
 
@@ -17,7 +16,6 @@ def app():
         yield app
         db.session.remove()
         db.drop_all()
-        # Dispose of all connections after each test
         db.engine.dispose()
 
 

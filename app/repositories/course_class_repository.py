@@ -44,5 +44,4 @@ def has_completed_course(student_id, course_id):
 
 
 def get_prerequisites(course_id):
-    """Return list of CoursePrerequisite objects for the given course_id."""
     return CoursePrerequisite.query.filter_by(course_id=course_id).all()

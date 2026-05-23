@@ -11,7 +11,6 @@ from app.repositories.user_repository import (
 
 
 def test_get_user_by_username_success(app):
-    """Test retrieving user by existing username"""
     with app.app_context():
         user = User()
         user.username = "student01"
@@ -29,7 +28,6 @@ def test_get_user_by_username_success(app):
 
 
 def test_get_user_by_username_not_found(app):
-    """Test retrieving non-existent user by username"""
     with app.app_context():
         found_user = get_user_by_username("nonexistent")
 
@@ -37,7 +35,6 @@ def test_get_user_by_username_not_found(app):
 
 
 def test_get_user_by_username_with_none(app):
-    """Test retrieving user with None username"""
     with app.app_context():
         found_user = get_user_by_username(None)
 
@@ -45,7 +42,6 @@ def test_get_user_by_username_with_none(app):
 
 
 def test_get_user_by_id_success(app):
-    """Test retrieving user by existing id"""
     with app.app_context():
         user = User()
         user.username = "admin01"
@@ -64,7 +60,6 @@ def test_get_user_by_id_success(app):
 
 
 def test_get_user_by_id_not_found(app):
-    """Test retrieving non-existent user by id"""
     with app.app_context():
         found_user = get_user_by_id(9999)
 
@@ -72,7 +67,6 @@ def test_get_user_by_id_not_found(app):
 
 
 def test_create_user_success(app):
-    """Test creating a new user with default active status"""
     with app.app_context():
         password_hash = generate_password_hash("password123")
 
@@ -87,14 +81,12 @@ def test_create_user_success(app):
         assert created_user.role == UserRole.STUDENT
         assert created_user.is_active_account is True
 
-        # Verify user is persisted in DB
         found_user = get_user_by_id(created_user.id)
         assert found_user is not None
         assert found_user.username == "newuser"
 
 
 def test_create_user_inactive(app):
-    """Test creating a new inactive user"""
     with app.app_context():
         password_hash = generate_password_hash("password123")
 
@@ -109,14 +101,12 @@ def test_create_user_inactive(app):
         assert created_user.username == "inactiveuser"
         assert created_user.is_active_account is False
 
-        # Verify user is persisted with inactive status
         found_user = get_user_by_id(created_user.id)
         assert found_user is not None
         assert found_user.is_active_account is False
 
 
 def test_create_user_admin_role(app):
-    """Test creating a user with ADMIN role"""
     with app.app_context():
         password_hash = generate_password_hash("password123")
 

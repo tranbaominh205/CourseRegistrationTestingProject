@@ -53,7 +53,6 @@ def test_admin_login_success_redirect_to_admin_class_list(app, client):
     response = login(client, "admin01", "123456")
 
     assert response.status_code == 302
-    # app redirects admins to the admin class list at /admin/classes
     assert "/admin/classes" in response.location
 
 
@@ -126,7 +125,6 @@ def test_logout_redirect_to_login(app, client):
 
 
 def test_logged_in_student_access_login_redirect_to_student_dashboard(app, client):
-    """Test that a logged-in student accessing /login redirects to student dashboard"""
     with app.app_context():
         create_test_user()
 
@@ -139,7 +137,6 @@ def test_logged_in_student_access_login_redirect_to_student_dashboard(app, clien
 
 
 def test_logged_in_admin_access_login_redirect_to_admin_class_list(app, client):
-    """Test that a logged-in admin accessing /login redirects to admin class list"""
     with app.app_context():
         create_test_user(username="admin01", role=UserRole.ADMIN)
 

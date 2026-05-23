@@ -63,7 +63,6 @@ def class_list():
 
     classes = []
     active_semester = Semester.query.filter_by(is_active=True).first()
-    # default semester value for template even when no student is present
     semester = active_semester
 
     enrollments = []
@@ -74,11 +73,9 @@ def class_list():
     pending_cancel_ids = _get_pending_cancel_ids()
 
     if student is not None:
-        # Use active semester for the registration page when available
         semester = active_semester
 
         if semester is not None:
-            # validate registration window for this student/semester
             window_error = validate_registration_window(student, semester, date.today())
             if window_error is not None:
                 class_list_notice = window_error
@@ -86,7 +83,6 @@ def class_list():
                 classes = get_all_classes()
                 classes = [c for c in classes if c.semester_id == semester.id]
 
-            # only show enrollments for the active semester
             enrollments = Enrollment.query.filter_by(
                 student_id=student.id,
                 status=EnrollmentStatus.REGISTERED,
@@ -100,7 +96,6 @@ def class_list():
                 total_credits=total_credits,
             )
         else:
-            # No active semester: keep defaults (empty lists)
             semester = None
 
     return render_template(
@@ -122,7 +117,6 @@ def class_list():
 @login_required
 @role_required(UserRole.STUDENT)
 def completed_courses():
-    """Show list of completed courses for the current student."""
     student = get_current_student()
 
     if student is None:
@@ -180,7 +174,6 @@ def cancel_draft(enrollment_id):
         flash(error, "danger")
         return redirect(url_for("student.class_list"))
 
-    # Check server-side if this enrollment can be cancelled (midterm/deadline)
     ok, err = can_cancel_enrollment(student.id, enrollment.id)
     if not ok:
         flash(err, "danger")

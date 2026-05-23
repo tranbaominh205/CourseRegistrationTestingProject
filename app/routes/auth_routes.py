@@ -15,7 +15,6 @@ INVALID_CREDENTIAL_ERRORS = {
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
-    # If user is already logged in, redirect to appropriate dashboard
     if current_user.is_authenticated:
         if current_user.role == UserRole.ADMIN:
             return redirect(url_for("admin.class_list"))
@@ -45,15 +44,12 @@ def login():
 @auth_bp.route("/logout", methods=["GET", "POST"])
 @login_required
 def logout():
-    # Support both GET and POST so tests and UI can use either method
     logout_user()
-    # After logout, redirect to the login page
     return redirect(url_for("auth.login"))
 
 
 @auth_bp.route('/api/auth/status')
 def auth_status():
-    # Return simple JSON indicating whether the current session is authenticated
     return jsonify({"authenticated": current_user.is_authenticated})
 
 

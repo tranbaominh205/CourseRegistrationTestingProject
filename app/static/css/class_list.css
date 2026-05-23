@@ -42,7 +42,7 @@ body {
   border: 1px solid var(--border);
 }
 
-/* Header */
+
 .main-header {
   background-color: var(--header-bg);
   color: white;
@@ -66,7 +66,7 @@ body {
 }
 
 
-/* Toast Notifications */
+
 #toast-container {
   position: fixed;
   top: 20px;
@@ -126,7 +126,7 @@ body {
   border: 1px solid #f5c6cb;
 }
 
-/* Sections */
+
 main {
   padding: 24px;
   display: flex;
@@ -153,12 +153,12 @@ main {
   text-transform: uppercase;
 }
 
-/* Tables */
+
 .table-container {
   overflow-x: auto;
 }
 
-/* Scrollbar cho bảng danh sách lớp học phần (bảng đầu tiên) */
+
 .section-card:first-of-type .table-container {
   overflow-y: auto;
   max-height: 400px;
@@ -228,7 +228,7 @@ tr:hover td {
   padding-left: 15px;
 }
 
-/* Utility to truncate long text inside table cells */
+
 .truncate {
   max-width: 220px;
   overflow: hidden;
@@ -238,7 +238,7 @@ tr:hover td {
   vertical-align: middle;
 }
 
-/* Buttons used inside table action cells: keep text on one line and slightly smaller */
+
 .table-action-btn {
   padding: 6px 8px;
   font-size: 0.82rem;
@@ -248,7 +248,7 @@ tr:hover td {
   display: inline-block;
 }
 
-/* Filter inputs */
+
 .filter-row th {
   padding: 6px;
 }
@@ -261,7 +261,7 @@ tr:hover td {
   font-size: 0.75rem;
 }
 
-/* Buttons */
+
 .btn {
   padding: 6px 12px;
   border-radius: 4px;
@@ -277,9 +277,9 @@ tr:hover td {
   text-decoration: none;
 }
 
-/* Disabled button visual & cursor */
+
 .btn[disabled], button[disabled] {
-  cursor: not-allowed; /* show forbidden symbol */
+  cursor: not-allowed; 
   opacity: 0.65;
 }
 
@@ -334,7 +334,7 @@ tr:hover td {
   cursor: pointer;
 }
 
-/* Summary Box */
+
 .summary-box {
   background-color: #e7f1ff;
   border: 1px solid #cce5ff;
@@ -373,7 +373,7 @@ tr:hover td {
   color: var(--secondary);
 }
 
-/* Footer Actions */
+
 .action-footer {
   display: flex;
   gap: 12px;
@@ -396,14 +396,14 @@ tr:hover td {
   flex: 0 0 auto;
 }
 
-/* Constrain cancel column width */
+
 #registered-courses td:last-child {
   width: 100px;
   max-width: 100px;
   overflow: hidden;
 }
 
-/* Cancel status wrapper - ensure vertical stacking */
+
 .cancel-status-pending {
   display: flex !important;
   flex-direction: column !important;
@@ -412,7 +412,7 @@ tr:hover td {
   width: 100% !important;
 }
 
-/* Ensure form and button stack vertically */
+
 .cancel-status-pending form {
   width: 100% !important;
   display: block !important;
@@ -425,7 +425,7 @@ tr:hover td {
   margin: 0 auto !important;
 }
 
-/* Responsive */
+
 @media (max-width: 768px) {
   .summary-grid {
     grid-template-columns: 1fr;

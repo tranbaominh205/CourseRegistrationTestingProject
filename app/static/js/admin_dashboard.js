@@ -44,13 +44,9 @@ function renderTable() {
 
      const startIndex = (currentPage - 1) * itemsPerPage;
      const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-
-     // Hide all rows first
      document.querySelectorAll('.searchable-row').forEach(row => {
          row.style.display = 'none';
      });
-
-     // Show only filtered rows in the current page
      filteredRows.forEach((row, index) => {
          const isVisible = index >= startIndex && index < endIndex;
          row.style.display = isVisible ? 'table-row' : 'none';

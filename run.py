@@ -45,9 +45,6 @@ def seed_data():
     with app.app_context():
         today = date.today()
 
-        # =====================================================
-        # Helper functions
-        # =====================================================
 
         def get_or_create_user(username, password, role, active=True):
             user = User.query.filter_by(username=username).first()
@@ -102,7 +99,6 @@ def seed_data():
                 db.session.add(semester)
                 db.session.flush()
             else:
-                # update dates to match seed (idempotent)
                 semester.start_date = start_date
                 semester.end_date = end_date
                 semester.registration_start_date = registration_start_date
@@ -249,9 +245,6 @@ def seed_data():
 
             return pr
 
-        # =====================================================
-        # 1. USERS
-        # =====================================================
 
         admin_user = get_or_create_user(
             username="admin01",
@@ -309,12 +302,7 @@ def seed_data():
             active=False
         )
 
-        # =====================================================
-        # 2. SEMESTERS
-        # =====================================================
 
-        # Create two primary semesters for the application per new requirement
-        # Semester 1 (previously used to store completed courses)
         hk1 = get_or_create_semester(
             name="HK I",
             academic_year="2026",
@@ -325,7 +313,6 @@ def seed_data():
             is_active=False,
         )
 
-        # Semester 2 (active, open for registration)
         hk2 = get_or_create_semester(
             name="HK II",
             academic_year="2026",
@@ -340,7 +327,6 @@ def seed_data():
         expired_semester = hk1
         future_semester = None
 
-        # Registration windows by major for active semester
         get_or_create_major_registration_window(
             semester=active_semester,
             major="Information Technology",
@@ -360,20 +346,13 @@ def seed_data():
             registration_end_date=today + timedelta(days=25),
         )
 
-        # =====================================================
-        # 3. ROOMS
-        # =====================================================
 
         room_a101 = get_or_create_room("A101")
         room_b202 = get_or_create_room("B202")
         room_c303 = get_or_create_room("C303")
         room_d404 = get_or_create_room("D404")
 
-        # =====================================================
-        # 4. COURSES
-        # =====================================================
 
-        # 2 môn sinh viên đã học
         course_completed_1 = get_or_create_course(
             code="ITEC1401",
             name="Nhập môn lập trình",
@@ -386,14 +365,12 @@ def seed_data():
             credits=3
         )
 
-        # 1 môn đã học khác dùng làm điều kiện tiên quyết cho môn mới
         course_prereq_new = get_or_create_course(
             code="ITEC1501",
             name="Nhập môn hệ thống máy tính",
             credits=3
         )
 
-        # 2 môn hết hạn đăng ký học phần
         course_expired_1 = get_or_create_course(
             code="ITEC2601",
             name="Cấu trúc dữ liệu",
@@ -406,7 +383,6 @@ def seed_data():
             credits=3
         )
 
-        # 2 môn lớp học phần đã đủ số lượng
         course_full_1 = get_or_create_course(
             code="ITEC4501",
             name="Kiểm thử phần mềm",
@@ -419,7 +395,6 @@ def seed_data():
             credits=3
         )
 
-        # 10 môn còn lại đăng ký được
         course_open_1 = get_or_create_course(
             code="ITEC2504",
             name="Lập trình hướng đối tượng",
@@ -480,21 +455,18 @@ def seed_data():
             credits=1
         )
 
-        # Course used to test "before registration start" on UI
         course_future = get_or_create_course(
             code="ITECFUT1",
             name="Môn chưa mở đăng ký",
             credits=3
         )
 
-        # Course with two classes to test "already registered in another class"
         course_dup = get_or_create_course(
             code="ITECDUP1",
             name="Môn duplicate",
             credits=3
         )
 
-        # 2 lớp trùng lịch để test
         course_conflict_1 = get_or_create_course(
             code="ITEC5001",
             name="Phát triển ứng dụng web",
@@ -507,18 +479,13 @@ def seed_data():
             credits=3
         )
 
-        # Môn mới cần điều kiện tiên quyết để test đăng ký thành công
         course_prereq_target = get_or_create_course(
             code="ITEC3503",
             name="Phát triển hệ thống",
             credits=3
         )
 
-        # =====================================================
-        # 5. COURSE CLASSES
-        # =====================================================
 
-        # 2 lớp thuộc môn sinh viên đã học (assign to HK I as completed courses)
         class_completed_1 = get_or_create_class(
             course=course_completed_1,
             semester=hk1,
@@ -543,8 +510,6 @@ def seed_data():
             current_students=0
         )
 
-        # 2 lớp ở HK II cho đúng các môn sinh viên đã học ở HK I
-        # dùng để test chức năng không cho đăng ký lại môn đã hoàn thành
         class_completed_1_hk2 = get_or_create_class(
             course=course_completed_1,
             semester=hk2,
@@ -561,7 +526,6 @@ def seed_data():
             current_students=0
         )
 
-        # 2 lớp đã hết hạn đăng ký học phần (place them in hk2 but with registration window expired by major window)
         class_expired_1 = get_or_create_class(
             course=course_expired_1,
             semester=hk2,
@@ -578,7 +542,6 @@ def seed_data():
             current_students=0
         )
 
-        # 2 lớp học phần đã đủ số lượng
         class_full_1 = get_or_create_class(
             course=course_full_1,
             semester=hk2,
@@ -595,7 +558,6 @@ def seed_data():
             current_students=50
         )
 
-        # 10 lớp còn lại đăng ký được (assign to HK II active)
         class_open_1 = get_or_create_class(
             course=course_open_1,
             semester=hk2,
@@ -676,7 +638,6 @@ def seed_data():
             current_students=0
         )
 
-        # Optionally create a future class in none (skip if future_semester is None)
         if future_semester is not None:
             class_future = get_or_create_class(
                 course=course_future,
@@ -686,7 +647,6 @@ def seed_data():
                 current_students=0
             )
 
-        # Two classes for the same course in active semester to test duplicate-course registration
         class_dup_1 = get_or_create_class(
             course=course_dup,
             semester=hk2,
@@ -703,7 +663,6 @@ def seed_data():
             current_students=0
         )
 
-        # 2 lớp trùng lịch
         class_conflict_1 = get_or_create_class(
             course=course_conflict_1,
             semester=hk2,
@@ -728,32 +687,21 @@ def seed_data():
             current_students=0
         )
 
-        # =====================================================
-        # 6. SCHEDULES
-        # =====================================================
-        # Các lớp đăng ký được được xếp lịch không trùng nhau
-        # để sinh viên có thể đăng ký đủ 12, 25 tín chỉ.
 
-        # 2 lớp thuộc môn đã học
         get_or_create_schedule(class_completed_1, room_a101, 2, 1, 3)
         get_or_create_schedule(class_completed_2, room_b202, 2, 4, 6)
 
-        # Lớp điều kiện tiên quyết đã học (HK I)
         get_or_create_schedule(class_prereq_new, room_a101, 1, 1, 3)
 
-        # 2 lớp HK II cho các môn đã học (không trùng lịch với các lớp còn lại)
         get_or_create_schedule(class_completed_1_hk2, room_c303, 1, 1, 3)
         get_or_create_schedule(class_completed_2_hk2, room_d404, 1, 4, 6)
 
-        # 2 lớp hết hạn đăng ký
         get_or_create_schedule(class_expired_1, room_c303, 3, 1, 3)
         get_or_create_schedule(class_expired_2, room_d404, 3, 4, 6)
 
-        # 2 lớp đầy
         get_or_create_schedule(class_full_1, room_a101, 4, 1, 3)
         get_or_create_schedule(class_full_2, room_b202, 4, 4, 6)
 
-        # 10 lớp đăng ký được
         get_or_create_schedule(class_open_1, room_a101, 2, 7, 10)
         get_or_create_schedule(class_open_2, room_b202, 3, 7, 9)
         get_or_create_schedule(class_open_3, room_c303, 4, 7, 9)
@@ -765,33 +713,22 @@ def seed_data():
         get_or_create_schedule(class_open_9, room_a101, 7, 1, 2)
         get_or_create_schedule(class_open_10, room_b202, 7, 4, 4)
 
-        # 2 lớp trùng lịch (overlapping với class_open_5: Thứ 5, tiết 3-5)
-        # không trùng với nhau nhưng cả 2 đều trùng với class_open_5
-        get_or_create_schedule(class_conflict_1, room_c303, 5, 1, 3)  # Thứ 5, tiết 1-3 (trùng tiết 3)
-        get_or_create_schedule(class_conflict_2, room_d404, 5, 4, 6)  # Thứ 5, tiết 4-6 (trùng tiết 4-5)
+        get_or_create_schedule(class_conflict_1, room_c303, 5, 1, 3)
+        get_or_create_schedule(class_conflict_2, room_d404, 5, 4, 6)
 
-        # Lớp môn mới cần tiên quyết, chọn lịch riêng để student01 có thể đăng ký
         get_or_create_schedule(class_prereq_target, room_b202, 1, 7, 9)
 
-        # schedule for future class (any slot)
         try:
             get_or_create_schedule(class_future, room_a101, 2, 1, 3)
         except Exception:
             pass
 
-        # schedules for duplicate-course classes (non-conflicting)
         try:
             get_or_create_schedule(class_dup_1, room_b202, 3, 1, 3)
             get_or_create_schedule(class_dup_2, room_c303, 4, 1, 3)
         except Exception:
             pass
 
-        # =====================================================
-        # 7. COMPLETED COURSES
-        # =====================================================
-        # student01 đã học đúng 2 môn:
-        # - ITEC1401
-        # - ITEC2501
 
         get_or_create_completed_course(
             student=student,
@@ -817,38 +754,26 @@ def seed_data():
             status=CompletedCourseStatus.PASSED
         )
 
-        # =====================================================
-        # 8. PREREQUISITES (seed some prerequisites for testing)
-        # =====================================================
-        # Make ITEC2504 (Lập trình hướng đối tượng) require ITEC1401
         try:
             get_or_create_prerequisite(course_open_1, course_completed_1)
         except Exception:
             pass
 
-        # Make ITEC2201 (Cơ sở dữ liệu) require ITEC2501
         try:
             get_or_create_prerequisite(course_open_3, course_completed_2)
         except Exception:
             pass
 
-        # Môn mới ITEC3503 cần ITEC1501, và student01 đã học ITEC1501
         try:
             get_or_create_prerequisite(course_prereq_target, course_prereq_new)
         except Exception:
             pass
 
-        # Add an extra prerequisite for testing: make ITEC4401 (Trí tuệ nhân tạo)
-        # require ITEC3301 (Mạng máy tính) which student01 has NOT completed.
-        # This allows testing missing prerequisites for student01 without using student02.
         try:
             get_or_create_prerequisite(course_open_7, course_open_5)
         except Exception:
             pass
 
-        # =====================================================
-        # 9. SOME INITIAL ENROLLMENTS (to test registered list / cancel flow)
-        # =====================================================
         def get_or_create_enrollment(student, course_class, semester):
             en = Enrollment.query.filter_by(
                 student_id=student.id,
@@ -864,7 +789,6 @@ def seed_data():
                     status=EnrollmentStatus.REGISTERED
                 )
                 db.session.add(en)
-                # increment current_students
                 try:
                     course_class.current_students = (course_class.current_students or 0) + 1
                 except Exception:
@@ -873,12 +797,9 @@ def seed_data():
 
             return en
 
-        # Enroll student01 into a few classes for baseline testing
         try:
-            # Create some initial enrollments for student in HK II
             get_or_create_enrollment(student, class_open_1, hk2)
             get_or_create_enrollment(student, class_open_2, hk2)
-            # Enroll into one duplicate section to test duplicate-course behavior
             try:
                 get_or_create_enrollment(student, class_dup_1, hk2)
             except Exception:
@@ -886,7 +807,6 @@ def seed_data():
         except Exception:
             pass
 
-        # Make one enrollment have a midterm score so it's not cancellable via UI
         try:
             en_mid = Enrollment.query.filter_by(
                 student_id=student.id,
@@ -901,8 +821,6 @@ def seed_data():
         except Exception:
             pass
 
-        # student02 belongs to major with expired registration window
-        # and has exactly 12 credits already registered (4 + 3 + 3 + 2).
         try:
             get_or_create_enrollment(student2, class_open_1, active_semester)
             get_or_create_enrollment(student2, class_open_2, active_semester)
@@ -911,8 +829,6 @@ def seed_data():
         except Exception:
             pass
 
-        # student03 is in a major that has not reached registration window yet
-        # and intentionally has no initial enrollments.
 
         db.session.commit()
 

@@ -126,13 +126,11 @@ def test_admin_create_course_class_over_50_route_fail(app, client):
 
 
 def test_admin_create_course_class_duplicate_code_route_fail(app, client):
-    """Test case 3: Không cho tạo mã lớp trùng"""
     with app.app_context():
         admin_user = create_user("admin01", UserRole.ADMIN)
         course, semester, room = create_base_data()
         login_as(client, admin_user)
 
-        # Create first class
         response1 = client.post(
             "/admin/classes/create",
             data={
@@ -151,7 +149,6 @@ def test_admin_create_course_class_duplicate_code_route_fail(app, client):
         assert response1.status_code == 200
         assert "Tạo lớp học phần thành công".encode("utf-8") in response1.data
 
-        # Try to create another class with the same code
         response2 = client.post(
             "/admin/classes/create",
             data={
@@ -172,13 +169,11 @@ def test_admin_create_course_class_duplicate_code_route_fail(app, client):
 
 
 def test_admin_create_course_class_same_room_different_time_route_success(app, client):
-    """Test case 5: Cho tạo cùng phòng nhưng khác tiết"""
     with app.app_context():
         admin_user = create_user("admin01", UserRole.ADMIN)
         course, semester, room = create_base_data()
         login_as(client, admin_user)
 
-        # Create first class
         response1 = client.post(
             "/admin/classes/create",
             data={
@@ -197,7 +192,6 @@ def test_admin_create_course_class_same_room_different_time_route_success(app, c
         assert response1.status_code == 200
         assert "Tạo lớp học phần thành công".encode("utf-8") in response1.data
 
-        # Create second class in same room but different time
         response2 = client.post(
             "/admin/classes/create",
             data={
@@ -219,7 +213,6 @@ def test_admin_create_course_class_same_room_different_time_route_success(app, c
 
 
 def test_admin_create_course_class_same_time_different_room_route_success(app, client):
-    """Test case 6: Cho tạo cùng tiết nhưng khác phòng"""
     with app.app_context():
         admin_user = create_user("admin01", UserRole.ADMIN)
         
@@ -241,7 +234,6 @@ def test_admin_create_course_class_same_time_different_room_route_success(app, c
         
         login_as(client, admin_user)
 
-        # Create first class
         response1 = client.post(
             "/admin/classes/create",
             data={
@@ -260,7 +252,6 @@ def test_admin_create_course_class_same_time_different_room_route_success(app, c
         assert response1.status_code == 200
         assert "Tạo lớp học phần thành công".encode("utf-8") in response1.data
 
-        # Create second class in different room but same time
         response2 = client.post(
             "/admin/classes/create",
             data={
@@ -282,13 +273,11 @@ def test_admin_create_course_class_same_time_different_room_route_success(app, c
 
 
 def test_admin_delete_course_class_without_enrollment_route_success(app, client):
-    """Test case 8: Cho xoá lớp chưa có sinh viên đăng ký"""
     with app.app_context():
         admin_user = create_user("admin01", UserRole.ADMIN)
         course, semester, room = create_base_data()
         login_as(client, admin_user)
 
-        # Create a class
         response_create = client.post(
             "/admin/classes/create",
             data={
@@ -306,11 +295,9 @@ def test_admin_delete_course_class_without_enrollment_route_success(app, client)
         )
         assert response_create.status_code == 200
 
-        # Get the created class
         course_class = CourseClass.query.filter_by(class_code="IT001-01").first()
         assert course_class is not None
 
-        # Delete the class
         response_delete = client.post(
             f"/admin/classes/{course_class.id}/delete",
             follow_redirects=True,
@@ -319,19 +306,16 @@ def test_admin_delete_course_class_without_enrollment_route_success(app, client)
         assert response_delete.status_code == 200
         assert "Xoá lớp học phần thành công".encode("utf-8") in response_delete.data
         
-        # Verify class is deleted
         deleted_class = CourseClass.query.filter_by(id=course_class.id).first()
         assert deleted_class is None
 
 
 def test_admin_delete_course_class_with_enrollment_route_fail(app, client):
-    """Test case 7: Không cho xoá lớp đã có sinh viên đăng ký"""
     with app.app_context():
         admin_user = create_user("admin01", UserRole.ADMIN)
         course, semester, room = create_base_data()
         login_as(client, admin_user)
 
-        # Create a class
         response_create = client.post(
             "/admin/classes/create",
             data={
@@ -352,7 +336,6 @@ def test_admin_delete_course_class_with_enrollment_route_fail(app, client):
         course_class = CourseClass.query.filter_by(class_code="IT001-01").first()
         assert course_class is not None
 
-        # Create a student and enroll
         student_user = create_user("student01", UserRole.STUDENT)
         student = Student(
             user_id=student_user.id,
@@ -372,7 +355,6 @@ def test_admin_delete_course_class_with_enrollment_route_fail(app, client):
         db.session.add(enrollment)
         db.session.commit()
 
-        # Try to delete the class with students
         response_delete = client.post(
             f"/admin/classes/{course_class.id}/delete",
             follow_redirects=True,
@@ -381,6 +363,5 @@ def test_admin_delete_course_class_with_enrollment_route_fail(app, client):
         assert response_delete.status_code == 200
         assert "Không được xoá lớp".encode("utf-8") in response_delete.data
         
-        # Verify class still exists
         existing_class = CourseClass.query.filter_by(id=course_class.id).first()
         assert existing_class is not None
